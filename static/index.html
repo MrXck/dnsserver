@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DNS服务器配置页</title>
+    <script src="js/vue.js"></script>
+    <script src="js/axios-0.18.0.js"></script>
+    <script src="element-ui/lib/index.js"></script>
+    <script src="js/Sortable.min.js"></script>
+    <link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+</head>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    .el-button + .el-button {
+        margin-left: 0;
+    }
+</style>
+<body>
+<div id="app">
+    <div v-if="loading !== null" style="padding: 10px">
+        <el-row :gutter="20">
+            <el-col :span="18">
+                <el-card>
+                    <el-row>
+                        日志
+                    </el-row>
+                    <el-row :gutter="20" style="margin-top: 10px">
+                        <el-col :span="4">
+                            <span>日志刷新时间(s)</span>
+                            <el-input-number v-model="refreshLogTime" size="mini" @change="logRefresh" :min="1"
+                                             :max="999" label="日志刷新时间"></el-input-number>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="startRefreshLog"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="logRefresh"
+                            >
+                            </el-switch>
+                            <span>日志刷新</span>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-input v-model="config.log_num"/>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-button @click="updateLogNum">修改</el-button>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-button @click="testDialog.show = true" type="primary">打开测试窗口</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-top: 10px">
+                        <el-table
+                                :data="config.is_deduplicate ? filterLogList : logList"
+                                tooltip-effect="dark"
+                                style="width: 100%"
+                                border
+                                :height="300"
+                        >
+                            <el-table-column
+                                    label="日志"
+                            >
+                                <template slot-scope="scope">{{ scope.row }}</template>
+                            </el-table-column>
+                        </el-table>
+                    </el-row>
+                </el-card>
+            </el-col>
+            <el-col :span="6">
+                <el-card style="display: flex;flex-direction: column;justify-content: space-between">
+                    <div>
+                        <el-row>
+                            配置的缓存刷新时间(单位: 秒)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.refresh_time"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updateRefreshTime">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            配置的定时任务刷新缓存时间(单位: 秒)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.refresh_cache_time"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updateRefreshCacheTime">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            服务使用的端口(重启服务后生效)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.port"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updatePort">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            web服务使用的端口(重启服务后生效)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.web_port"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updateWebPort">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            为本机设置的dns ip
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="dns_ip"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updateSelfDns">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>日志筛选</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="screen_rule" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-button @click="updateScreenRule(screen_rule, 'add')">增加</el-button>
+                        </el-col>
+                        <el-col :span="7">
+                            <el-switch
+                                    v-model="config.is_screen"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="save({'is_screen': config.is_screen})"
+                            >
+                            </el-switch>
+                            <span>日志筛选</span>
+                        </el-col>
+                        <el-col :span="7">
+                            <el-switch
+                                    v-model="config.is_deduplicate"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="save({'is_deduplicate': config.is_deduplicate})"
+                            >
+                            </el-switch>
+                            <span>日志去重(ip + 域名)</span>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.screen_rule"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="筛选的域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(screenRuleDialog, scope.row)">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteScreenRule(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('screen_rule', config.screen_rule[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('screen_rule', config.screen_rule[scope.$index], false)">
+                                    停用
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>日志过滤</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="filter_rule" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="5">
+                            <el-button @click="updateFilterRule(filter_rule, 'add')">增加</el-button>
+                        </el-col>
+                        <el-col :span="7">
+                            <el-switch
+                                    v-model="config.is_filter"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="save({'is_filter': config.is_filter})"
+                            >
+                            </el-switch>
+                            <span>日志过滤</span>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.filter_rule"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="过滤的域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(filterRuleDialog, scope.row)">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteFilterRule(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('filter_rule', config.filter_rule[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('filter_rule', config.filter_rule[scope.$index], false)">
+                                    停用
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>dns服务器配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="dnsservers" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateDnsServer(dnsservers, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.dnsservers"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                            id="dnsservers"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="dns服务器ip"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(dnsServersDialog, scope.row)">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteDnsServer(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('dnsservers', config.dnsservers[scope.$index], true)">启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('dnsservers', config.dnsservers[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.dnsservers, 'dnsservers')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>不允许请求该dns服务器的ip配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="not_response" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateNotResponse(not_response, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.not_response"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            :height="300"
+                            border
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="在黑名单里的请求ip"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(notResponseDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteNotResponse(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('not_response', config.not_response[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('not_response', config.not_response[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.not_response, 'not_response')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>允许请求该dns服务器的ip配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="can_request" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateCanRequest(can_request, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.can_request"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="dns服务器ip"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(canRequestDialog, scope.row)">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteCanRequest(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('can_request', config.can_request[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('can_request', config.can_request[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.can_request, 'can_request')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>给域名配置固定ip</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="immobilization.domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-input v-model="immobilization.ip" placeholder="请输入ip" clearable/>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-button @click="getIp('immobilization', immobilization.domain)">
+                                获取ip
+                            </el-button>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateImmobilization(immobilization.ip, immobilization.domain, 'add')">
+                                增加
+                            </el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.immobilization['domain']"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            :height="300"
+                            border
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="ip"
+                        >
+                            <template slot-scope="scope">{{ config.immobilization['ip'][scope.$index]['data'] }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(immobilizationDialog, {domain: scope.row['data'], ip: config.immobilization['ip'][scope.$index]['data']})">
+                                    编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteImmobilization(scope.row['data'])">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('immobilization', scope.$index, true)">启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('immobilization', scope.$index, false)">停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.immobilization, 'immobilization')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>允许访问的域名配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="allow" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateAllow(allow, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.allow"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            :height="300"
+                            border
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="允许访问的域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(allowDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteAllow(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('allow', config.allow[scope.$index], true)">启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('allow', config.allow[scope.$index], false)">停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.allow, 'allow')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>不允许访问的ip配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="response_blacklist" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateResponseBlacklist(response_blacklist, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.response_blacklist"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="域名解析后的ip黑名单"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(responseBlacklistDialog, scope.row['data'])">
+                                    编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteResponseBlacklist(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('response_blacklist', config.response_blacklist[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('response_blacklist', config.response_blacklist[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.response_blacklist, 'response_blacklist')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>返回空值的域名配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="not_request" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateNotRequest(not_request, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.not_request"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="不向上请求的域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(notRequestDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteNotRequest(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('not_request', config.not_request[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('not_request', config.not_request[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.not_request, 'not_request')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>不允许请求的域名配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="request_blacklist" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateRequestBlacklist(request_blacklist, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.request_blacklist"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="在黑名单里的请求域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(requestBlacklistDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteRequestBlacklist(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('request_blacklist', config.request_blacklist[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('request_blacklist', config.request_blacklist[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.request_blacklist, 'request_blacklist')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>返回固定ip的域名</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="return_ip.domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-input v-model="return_ip.ip" placeholder="请输入ip" clearable/>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-button @click="getIp('return_ip', return_ip.domain)">
+                                获取ip
+                            </el-button>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateReturnIp(return_ip.ip, return_ip.domain, 'add')">
+                                增加
+                            </el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.return_ip['domain']"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="ip"
+                        >
+                            <template slot-scope="scope">{{ config.return_ip['ip'][scope.$index]['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(returnIpDialog, {domain: scope.row['data'], ip: config.return_ip['ip'][scope.$index]['data']})">
+                                    编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteReturnIp(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('return_ip', scope.$index, true)">启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('return_ip', scope.$index, false)">停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.return_ip, 'return_ip')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col>
+                            <h3>不允许访问的域名</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="not_allow" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateNotAllow(not_allow, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.not_allow"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="300"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="不允许访问的域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(notAllowDialog, scope.row['data'])">
+                                    编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteNotAllow(scope.row)">删除</el-button>
+                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('not_allow', config.not_allow[scope.$index], true)">启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('not_allow', config.not_allow[scope.$index], false)">停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.not_allow, 'not_allow')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
+    </div>
+    <el-dialog title="编辑日志筛选域名"
+               :visible.sync="screenRuleDialog.show">
+        <el-row style="margin-bottom: 10px">
+            dns服务器ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="screenRuleDialog.now.data"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="screenRuleDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateScreenRule(screenRuleDialog.now.data, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑日志过滤域名"
+               :visible.sync="filterRuleDialog.show">
+        <el-row style="margin-bottom: 10px">
+            dns服务器ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="filterRuleDialog.now.data"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="filterRuleDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateFilterRule(filterRuleDialog.now.data, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑dns服务器ip"
+               :visible.sync="dnsServersDialog.show">
+        <el-row style="margin-bottom: 10px">
+            dns服务器ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="dnsServersDialog.now.data"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dnsServersDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateDnsServer(dnsServersDialog.now.data, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑允许请求的ip"
+               :visible.sync="canRequestDialog.show">
+        <el-row style="margin-bottom: 10px">
+            dns服务器ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="canRequestDialog.now.data"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="canRequestDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateCanRequest(canRequestDialog.now.data, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑不允许访问的域名"
+               :visible.sync="notAllowDialog.show">
+        <el-row style="margin-bottom: 10px">
+            不允许访问的域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="notAllowDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="notAllowDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateNotAllow(notAllowDialog.now, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑允许访问的域名"
+               :visible.sync="allowDialog.show">
+        <el-row style="margin-bottom: 10px">
+            允许访问的域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="allowDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="allowDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateAllow(allowDialog.now, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑不向上请求的域名"
+               :visible.sync="notRequestDialog.show">
+        <el-row style="margin-bottom: 10px">
+            不向上请求的域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="notRequestDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="notRequestDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateNotRequest(notRequestDialog.now, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑返回配置的ip的ip"
+               :visible.sync="returnIpDialog.show">
+        <el-row style="margin-bottom: 10px">
+            缓存域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="returnIpDialog.now.domain"/>
+            </el-col>
+        </el-row>
+        <el-row style="margin-bottom: 10px">
+            缓存ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="returnIpDialog.now.ip"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="returnIpDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateReturnIp(returnIpDialog.now.ip, returnIpDialog.now.domain, 'edit')">
+                确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑在黑名单里的请求ip"
+               :visible.sync="notResponseDialog.show">
+        <el-row style="margin-bottom: 10px">
+            黑名单里的请求ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="notResponseDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="notResponseDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateNotResponse(notResponseDialog.now, 'edit')">确 定</el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑在黑名单里的请求域名"
+               :visible.sync="requestBlacklistDialog.show">
+        <el-row style="margin-bottom: 10px">
+            黑名单里的请求ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="requestBlacklistDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="requestBlacklistDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateRequestBlacklist(requestBlacklistDialog.now, 'edit')">确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑域名解析后的ip黑名单"
+               :visible.sync="responseBlacklistDialog.show">
+        <el-row style="margin-bottom: 10px">
+            域名解析后的ip黑名单
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="responseBlacklistDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="responseBlacklistDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateResponseBlacklist(responseBlacklistDialog.now, 'edit')">确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑缓存域名"
+               :visible.sync="immobilizationDialog.show">
+        <el-row style="margin-bottom: 10px">
+            缓存域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="immobilizationDialog.now.domain"/>
+            </el-col>
+        </el-row>
+        <el-row style="margin-bottom: 10px">
+            缓存ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="immobilizationDialog.now.ip"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="immobilizationDialog.show = false">取 消</el-button>
+            <el-button type="primary"
+                       @click="updateImmobilization(immobilizationDialog.now.ip, immobilizationDialog.now.domain, 'edit')">
+                确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="调整顺序"
+               :visible.sync="updateSequenceDialog.show">
+        <el-row :gutter="24">
+            <el-col :span="10">
+                调整前顺序
+                <el-input v-model="updateSequenceDialog.old" readonly/>
+            </el-col>
+            <el-col :span="10">
+                调整后顺序
+                <el-input v-model="updateSequenceDialog.new"/>
+            </el-col>
+        </el-row>
+        <el-row style="margin-top: 10px">
+            <el-col :span="24">
+                <el-table
+                        :data="(updateSequenceDialog.type === 'immobilization' || updateSequenceDialog.type === 'return_ip') ? config[updateSequenceDialog.type]['domain'] : config[updateSequenceDialog.type]"
+                        tooltip-effect="dark"
+                        style="width: 100%"
+                        border
+                        :height="300"
+                >
+                    <el-table-column
+                            label="序号"
+                    >
+                        <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                    </el-table-column>
+                    <el-table-column
+                            label=""
+                    >
+                        <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                    </el-table-column>
+                    <el-table-column
+                            label=""
+                            v-if="updateSequenceDialog.type === 'immobilization' || updateSequenceDialog.type === 'return_ip'"
+                    >
+                        <template slot-scope="scope">{{ config[updateSequenceDialog.type]['ip'][scope.$index]['data'] }}
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="updateSequenceDialog.show = false">取 消</el-button>
+            <el-button type="primary"
+                       @click="updateSequence">
+                确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="ip或域名测试" :visible.sync="testDialog.show">
+        <el-row>
+            <el-col :span="12">
+                <el-row>
+                    测试类型
+                </el-row>
+                <el-row>
+                    <el-select v-model="testDialog.type" placeholder="请选择">
+                        <el-option
+                                v-for="item in testDialog.options"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-row>
+            </el-col>
+            <el-col :span="12">
+                请输入要测试的值
+                <el-input v-model="testDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="testDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="testConfig(testDialog.now)">确 定
+            </el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script>
+    const request = axios
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            config: {
+                immobilization: {},
+                return_ip: {},
+            },
+            loading: null,
+            keyword: '',
+            dnsservers: '',
+            screen_rule: '',
+            filter_rule: '',
+            can_request: '',
+            not_allow: '',
+            allow: '',
+            not_request: '',
+            not_response: '',
+            request_blacklist: '',
+            response_blacklist: '',
+            dns_ip: '',
+            self_ip_list: [],
+            updateSequenceDialog: {
+                show: false,
+                old: 0,
+                new: 1,
+                data: [],
+                type: ''
+            },
+            immobilization: {
+                domain: '',
+                ip: '',
+            },
+            return_ip: {
+                domain: '',
+                ip: '',
+            },
+            reg: {
+                // ipReg: new RegExp(/(^(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}(?:\/(?:3[0-2]|[1-2]?\d)\.(?:3[0-2]|[1-2]?\d))?(?:,(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}(?:\/(?:3[0-2]|[1-2]?\d)\.(?:3[0-2]|[1-2]?\d))?)*$)|(^\.\*$)/),
+                ipReg: new RegExp(/(^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:$)|(^\.\*$)|(-)/),
+           ipRangeReg: new RegExp(/(^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:\-((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){6}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^::([\da-fA-F]{1,4}:){0,4}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:):([\da-fA-F]{1,4}:){0,3}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){2}:([\da-fA-F]{1,4}:){0,2}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){3}:([\da-fA-F]{1,4}:){0,1}((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){4}:((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$|^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$|^:((:[\da-fA-F]{1,4}){1,6}|:)$|^[\da-fA-F]{1,4}:((:[\da-fA-F]{1,4}){1,5}|:)$|^([\da-fA-F]{1,4}:){2}((:[\da-fA-F]{1,4}){1,4}|:)$|^([\da-fA-F]{1,4}:){3}((:[\da-fA-F]{1,4}){1,3}|:)$|^([\da-fA-F]{1,4}:){4}((:[\da-fA-F]{1,4}){1,2}|:)$|^([\da-fA-F]{1,4}:){5}:([\da-fA-F]{1,4})?$|^([\da-fA-F]{1,4}:){6}:$)/),
+                domainReg1: new RegExp(/([\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?)|(^\.\*$)/),
+                domainReg: new RegExp(/.*/),
+                notNumReg: new RegExp(/\D/),
+            },
+            dnsServersDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            canRequestDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            screenRuleDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            filterRuleDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            notAllowDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            allowDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            notRequestDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            returnIpDialog: {
+                origin: '',
+                now: {
+                    domain: '',
+                    ip: '',
+                },
+                show: false
+            },
+            notResponseDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            requestBlacklistDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            responseBlacklistDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            immobilizationDialog: {
+                origin: '',
+                now: {
+                    domain: '',
+                    ip: '',
+                },
+                show: false
+            },
+            logList: [],
+            startRefreshLog: false,
+            startScreenLog: false,
+            timer: null,
+            refreshLogTime: 3,
+            testDialog: {
+                show: false,
+                now: '',
+                options: [
+                    {
+                        value: 'ip',
+                        label: 'ip'
+                    }, {
+                        value: 'domain',
+                        label: '域名'
+                    }
+                ],
+                type: 'ip',
+                ip: ['not_response', 'response_blacklist', 'can_request'],
+                ipDescribe: ['不允许请求该dns服务器的ip', '不允许访问的ip', '允许请求该dns服务器的ip'],
+                domain: ['immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
+                domainDescribe: ['域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
+            }
+        },
+        methods: {
+            init() {
+                request.get('/all').then(res => {
+                    this.config = res.data
+                }).finally(() => {
+                    this.loading.close()
+                    // this.drop()
+                })
+
+                request.get('/get_self_ip').then(res => {
+                    try {
+                        this.dns_ip = res.data[0]
+                    } catch (e) {
+                        this.dns_ip = ''
+                    }
+                })
+            },
+            updateDnsServer(ip, type) {
+                if (this.reg.ipReg.test(ip)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.dnsservers.length; i++) {
+                            const data = this.config.dnsservers[i]['data']
+                            if (ip === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: ip,
+                            enable: true
+                        }
+                        this.config.dnsservers.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.dnsservers.length; i++) {
+                            let dns = this.config.dnsservers[i]['data']
+                            if (dns === this.dnsServersDialog.origin.data) {
+                                this.config.dnsservers[i]['data'] = ip
+                                this.$message.success('修改成功')
+                                this.dnsServersDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'dnsservers': this.config.dnsservers
+                })
+            },
+            deleteDnsServer(ip) {
+                this.config.dnsservers = this.config.dnsservers.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'dnsservers': this.config.dnsservers
+                })
+            },
+            updateScreenRule(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.screen_rule.length; i++) {
+                            const data = this.config.screen_rule[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.screen_rule.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.screen_rule.length; i++) {
+                            let dns = this.config.screen_rule[i]['data']
+                            if (dns === this.screenRuleDialog.origin.data) {
+                                this.config.screen_rule[i]['data'] = domain
+                                this.$message.success('修改成功')
+                                this.screenRuleDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'screen_rule': this.config.screen_rule
+                })
+            },
+            deleteScreenRule(domain) {
+                this.config.screen_rule = this.config.screen_rule.filter(data => {
+                    return data !== domain
+                })
+                this.save({
+                    'screen_rule': this.config.screen_rule
+                })
+            },
+            updateFilterRule(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.filter_rule.length; i++) {
+                            const data = this.config.filter_rule[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.filter_rule.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.filter_rule.length; i++) {
+                            let dns = this.config.filter_rule[i]['data']
+                            if (dns === this.filterRuleDialog.origin.data) {
+                                this.config.filter_rule[i]['data'] = domain
+                                this.$message.success('修改成功')
+                                this.filterRuleDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'filter_rule': this.config.filter_rule
+                })
+            },
+            deleteFilterRule(domain) {
+                this.config.filter_rule = this.config.filter_rule.filter(data => {
+                    return data !== domain
+                })
+                this.save({
+                    'filter_rule': this.config.filter_rule
+                })
+            },
+            updateCanRequest(ip, type) {
+                if (this.reg.ipReg.test(ip) || this.reg.ipRangeReg.test(ip)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.can_request.length; i++) {
+                            const data = this.config.can_request[i]['data']
+                            if (ip === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: ip,
+                            enable: true
+                        }
+                        this.config.can_request.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.can_request.length; i++) {
+                            let dns = this.config.can_request[i]['data']
+                            if (dns === this.canRequestDialog.origin.data) {
+                                this.config.can_request[i]['data'] = ip
+                                this.$message.success('修改成功')
+                                this.canRequestDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'can_request': this.config.can_request
+                })
+            },
+            deleteCanRequest(domain) {
+                this.config.can_request = this.config.can_request.filter(data => {
+                    return data !== domain
+                })
+                this.save({
+                    'can_request': this.config.can_request
+                })
+            },
+            showDialog(dialog, ip) {
+                dialog.show = true
+                dialog.origin = JSON.parse(JSON.stringify(ip))
+                dialog.now = JSON.parse(JSON.stringify(ip))
+            },
+            updateNotAllow(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.not_allow.length; i++) {
+                            const data = this.config.not_allow[i]['data']
+                            if (domain === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.not_allow.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.not_allow.length; i++) {
+                            let dns = this.config.not_allow[i].data
+                            if (dns === this.notAllowDialog.origin) {
+                                this.config.not_allow[i].data = domain
+                                this.$message.success('修改成功')
+                                this.notAllowDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                }
+                this.save({
+                    'not_allow': this.config.not_allow
+                })
+            },
+            deleteNotAllow(ip) {
+                this.config.not_allow = this.config.not_allow.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'not_allow': this.config.not_allow
+                })
+            },
+            updateAllow(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+
+                        for (let i = 0; i < this.config.allow.length; i++) {
+                            const data = this.config.allow[i]['data']
+                            if (domain === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.allow.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.allow.length; i++) {
+                            let dns = this.config.allow[i].data
+                            if (dns === this.allowDialog.origin) {
+                                this.config.allow[i].data = domain
+                                this.$message.success('修改成功')
+                                this.allowDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                }
+                this.save({
+                    'allow': this.config.allow
+                })
+            },
+            deleteAllow(ip) {
+                this.config.allow = this.config.allow.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'allow': this.config.allow
+                })
+            },
+            updateNotRequest(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.not_request.length; i++) {
+                            const data = this.config.not_request[i]['data']
+                            if (domain === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.not_request.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.not_request.length; i++) {
+                            let dns = this.config.not_request[i].data
+                            if (dns === this.notRequestDialog.origin) {
+                                this.config.not_request[i].data = domain
+                                this.$message.success('修改成功')
+                                this.notRequestDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                }
+                this.save({
+                    'not_request': this.config.not_request
+                })
+            },
+            deleteNotRequest(ip) {
+                this.config.not_request = this.config.not_request.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'not_request': this.config.not_request
+                })
+            },
+            updateReturnIp(ip, domain, type) {
+                if (this.reg.ipReg.test(ip) && this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        if (Object.keys(this.config.return_ip).indexOf('domain') !== -1) {
+
+                            for (let i = 0; i < this.config.return_ip.domain.length; i++) {
+                                if (this.config.return_ip.domain[i]['data'] === domain) {
+                                    this.$message.error('域名已存在')
+                                    return
+                                }
+                            }
+                            const domainData = {
+                                data: domain,
+                                enable: true
+                            }
+                            const ipData = {
+                                data: ip,
+                                enable: true
+                            }
+                            this.config.return_ip['domain'].unshift(domainData)
+                            this.config.return_ip['ip'].unshift(ipData)
+                        } else {
+
+                            const domainData = {
+                                data: domain,
+                                enable: true
+                            }
+                            const ipData = {
+                                data: ip,
+                                enable: true
+                            }
+                            this.config.return_ip['domain'] = [domainData]
+                            this.config.return_ip['ip'] = [ipData]
+                        }
+                    } else {
+                        if (Object.keys(this.config.return_ip).indexOf('domain') !== -1) {
+                            let flag = false
+                            for (let i = 0; i < this.config.return_ip.domain.length; i++) {
+                                if (this.config.return_ip.domain[i]['data'] === this.returnIpDialog.origin.domain) {
+                                    this.config.return_ip['domain'][i].data = domain
+                                    this.config.return_ip['ip'][i].data = ip
+                                    this.returnIpDialog.show = false
+                                    this.$message.success('修改成功')
+                                    flag = true
+                                }
+                            }
+                            if (!flag) {
+                                this.$message.error('修改失败')
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip或域名有误')
+                }
+                this.save({
+                    'return_ip': this.config.return_ip
+                })
+            },
+            deleteReturnIp(domain) {
+                if (Object.keys(this.config.return_ip).indexOf('domain') !== -1) {
+                    const index = this.config.return_ip['domain'].indexOf(domain)
+                    this.config.return_ip['domain'].splice(index, 1)
+                    this.config.return_ip['ip'].splice(index, 1)
+                    this.save({
+                        'return_ip': this.config.return_ip
+                    })
+                }
+            },
+            updateRefreshCacheTime() {
+                if (!this.reg.notNumReg.test(this.config.refresh_cache_time)) {
+                    this.save({
+                        'refresh_cache_time': this.config.refresh_cache_time
+                    })
+                } else {
+                    this.$message.error('请输入正确的数字')
+                }
+            },
+            updateSelfDns() {
+                console.log(this.dns_ip)
+                if (this.reg.ipReg.test(this.dns_ip)) {
+                    request.post('/set_dns', {dns: this.dns_ip}).then(res => {
+                        if (res.data.code === 0) {
+                            this.$message.success(`设置成功`)
+                        } else if (res.data.code === 2) {
+                            this.$message.error('设置失败 请使用管理员权限运行程序')
+                        } else {
+                            this.$message.error('设置失败')
+                        }
+                    })
+                }
+
+                else {
+                    this.$message.error('请输入正确的ip')
+                }
+            },
+            updateRefreshTime() {
+                if (this.reg.notNumReg.test(this.config.refresh_time.toString())) {
+                    this.$message.error('请输入数字')
+                } else {
+                    this.save({
+                        'refresh_time': this.config.refresh_time
+                    })
+                }
+
+            },
+            updatePort() {
+                if (this.reg.notNumReg.test(this.config.port.toString())) {
+                    this.$message.error('请输入数字')
+                } else {
+                    this.save({
+                        'port': this.config.port
+                    })
+                }
+
+            },
+            updateWebPort() {
+                if (this.reg.notNumReg.test(this.config.web_port.toString())) {
+                    this.$message.error('请输入数字')
+                } else {
+                    this.save({
+                        'web_port': this.config.web_port
+                    })
+                }
+
+            },
+            updateNotResponse(ip, type) {
+                if (this.reg.ipReg.test(ip) || this.reg.ipRangeReg.test(ip)) {
+                    if (type === 'add') {
+
+                        for (let i = 0; i < this.config.not_response.length; i++) {
+                            const data = this.config.not_response[i]['data']
+                            if (ip === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: ip,
+                            enable: true
+                        }
+                        this.config.not_response.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.not_response.length; i++) {
+                            let dns = this.config.not_response[i].data
+                            if (dns === this.notResponseDialog.origin) {
+                                this.config.not_response[i].data = ip
+                                this.$message.success('修改成功')
+                                this.notResponseDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'not_response': this.config.not_response
+                })
+            },
+            deleteNotResponse(ip) {
+                this.config.not_response = this.config.not_response.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'not_response': this.config.not_response
+                })
+            },
+            updateRequestBlacklist(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.request_blacklist.length; i++) {
+                            const data = this.config.request_blacklist[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.request_blacklist.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.request_blacklist.length; i++) {
+                            let dns = this.config.request_blacklist[i].data
+                            if (dns === this.requestBlacklistDialog.origin) {
+                                this.config.request_blacklist[i].data = domain
+                                this.$message.success('修改成功')
+                                this.requestBlacklistDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                }
+                this.save({
+                    'request_blacklist': this.config.request_blacklist
+                })
+            },
+            deleteRequestBlacklist(ip) {
+                this.config.request_blacklist = this.config.request_blacklist.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'request_blacklist': this.config.request_blacklist
+                })
+            },
+            updateResponseBlacklist(ip, type) {
+                if (this.reg.ipReg.test(ip)) {
+                    if (type === 'add') {
+
+                        for (let i = 0; i < this.config.response_blacklist.length; i++) {
+                            const data = this.config.response_blacklist[i]['data']
+                            if (ip === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: ip,
+                            enable: true
+                        }
+                        this.config.response_blacklist.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.response_blacklist.length; i++) {
+                            let dns = this.config.response_blacklist[i].data
+                            if (dns === this.responseBlacklistDialog.origin) {
+                                this.config.response_blacklist[i].data = ip
+                                this.$message.success('修改成功')
+                                this.responseBlacklistDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                }
+                this.save({
+                    'response_blacklist': this.config.response_blacklist
+                })
+            },
+            deleteResponseBlacklist(ip) {
+                this.config.response_blacklist = this.config.response_blacklist.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'response_blacklist': this.config.response_blacklist
+                })
+            },
+            updateImmobilization(ip, domain, type) {
+                if (this.reg.ipReg.test(ip) && this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        if (Object.keys(this.config.immobilization).indexOf('domain') !== -1) {
+                            for (let i = 0; i < this.config.immobilization.domain.length; i++) {
+                                if (this.config.immobilization.domain[i]['data'] === domain) {
+                                    this.$message.error('域名已存在')
+                                    return
+                                }
+                            }
+                            const domainData = {
+                                data: domain,
+                                enable: true
+                            }
+                            const ipData = {
+                                data: ip,
+                                enable: true
+                            }
+                            this.config.immobilization['domain'].unshift(domainData)
+                            this.config.immobilization['ip'].unshift(ipData)
+                        } else {
+                            const domainData = {
+                                data: domain,
+                                enable: true
+                            }
+                            const ipData = {
+                                data: ip,
+                                enable: true
+                            }
+                            this.config.immobilization['domain'] = [domainData]
+                            this.config.immobilization['ip'] = [ipData]
+                        }
+                    } else {
+                        if (Object.keys(this.config.immobilization).indexOf('domain') !== -1) {
+                            let flag = false
+                            for (let i = 0; i < this.config.immobilization.domain.length; i++) {
+                                if (this.config.immobilization.domain[i]['data'] === this.immobilizationDialog.origin.domain) {
+                                    this.config.immobilization['domain'][i].data = domain
+                                    this.config.immobilization['ip'][i].data = ip
+                                    this.immobilizationDialog.show = false
+                                    this.$message.success('修改成功')
+                                    flag = true
+                                }
+                            }
+                            if (!flag) {
+                                this.$message.error('修改失败')
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip或域名有误')
+                }
+                this.save({
+                    'immobilization': this.config.immobilization
+                })
+            },
+            deleteImmobilization(domain) {
+                if (Object.keys(this.config.immobilization).indexOf('domain') !== -1) {
+                    const index = this.config.immobilization['domain'].indexOf(domain)
+                    this.config.immobilization['domain'].splice(index, 1)
+                    this.config.immobilization['ip'].splice(index, 1)
+                    this.save({
+                        'immobilization': this.config.immobilization
+                    })
+                }
+            },
+            save(data) {
+                request.post('/update', data).then(res => {
+                }).finally(() => {
+                    this.init()
+                })
+            },
+            log() {
+                request.get('/log').then(res => {
+                    this.logList = res.data
+                })
+            },
+            logRefresh() {
+                clearInterval(this.timer)
+                if (this.startRefreshLog) {
+                    this.timer = setInterval(() => {
+                        this.log()
+                    }, this.refreshLogTime * 1000)
+                }
+            },
+            updateLogNum() {
+                if (!this.reg.notNumReg.test(this.config.log_num)) {
+                    this.save({
+                        'log_num': this.config.log_num
+                    })
+                } else {
+                    this.$message.error('请输入数字')
+                }
+            },
+            drop() {
+                const el = document.querySelector('#dnsservers .el-table__body-wrapper tbody')
+                const self = this
+                var ops = {
+                    // handle: ".handle",
+                    onEnd({newIndex, oldIndex}) {
+                        self.config.dnsservers.splice(newIndex, 0, self.config.dnsservers.splice(oldIndex, 1)[0])
+                        const newArray = self.config.dnsservers.slice(0)
+                        newArray.forEach((value, index) => {
+                            value.orderNum = index + 1 //序号为index+1
+                            self.$set(newArray, index, value)
+                            self.config.dnsservers = [] //
+                            self.$nextTick(() => {
+                                self.config.dnsservers = newArray ? newArray : []
+                            })
+                        })
+                    }
+                }
+                Sortable.create(el, ops)
+            },
+            showUpdateSequenceDialog(old, data, type) {
+                this.updateSequenceDialog.old = old
+                this.updateSequenceDialog.data = JSON.parse(JSON.stringify(data))
+                this.updateSequenceDialog.type = type
+                this.updateSequenceDialog.show = true
+            },
+            updateSequence() {
+                if (this.updateSequenceDialog.old < 0 || this.updateSequenceDialog.old > this.updateSequenceDialog.data.length) {
+                    this.$message.error("请输入正确的序号")
+                } else {
+                    if (this.reg.notNumReg.test(this.updateSequenceDialog.old) || this.reg.notNumReg.test(this.updateSequenceDialog.new)) {
+                        this.$message.error("请输入数字")
+                    } else {
+                        if (this.updateSequenceDialog.type !== 'immobilization' && this.updateSequenceDialog.type !== 'return_ip') {
+                            const oldValue = this.updateSequenceDialog.data[this.updateSequenceDialog.old - 1]
+                            if (this.updateSequenceDialog.old < this.updateSequenceDialog.new) {
+                                for (let i = this.updateSequenceDialog.old - 1; i < this.updateSequenceDialog.new - 1; i++) {
+                                    this.updateSequenceDialog.data[i] = this.updateSequenceDialog.data[i + 1]
+                                }
+                                this.updateSequenceDialog.data[this.updateSequenceDialog.new - 1] = oldValue
+                            } else if (this.updateSequenceDialog.old > this.updateSequenceDialog.new) {
+                                for (let i = this.updateSequenceDialog.old - 1; i > this.updateSequenceDialog.new - 1; i--) {
+                                    this.updateSequenceDialog.data[i] = this.updateSequenceDialog.data[i - 1]
+                                }
+                                this.updateSequenceDialog.data[this.updateSequenceDialog.new - 1] = oldValue
+                            }
+                            this.config[this.updateSequenceDialog.type] = this.updateSequenceDialog.data
+                            this.updateSequenceDialog.show = false
+                            this.save(this.config)
+                        } else {
+                            const list = ['ip', 'domain']
+                            for (let j = 0; j < list.length; j++) {
+                                const oldValue = this.updateSequenceDialog.data[list[j]][this.updateSequenceDialog.old - 1]
+                                if (this.updateSequenceDialog.old < this.updateSequenceDialog.new) {
+                                    for (let i = this.updateSequenceDialog.old - 1; i < this.updateSequenceDialog.new - 1; i++) {
+                                        this.updateSequenceDialog.data[list[j]][i] = this.updateSequenceDialog.data[list[j]][i + 1]
+                                    }
+                                    this.updateSequenceDialog.data[list[j]][this.updateSequenceDialog.new - 1] = oldValue
+                                } else if (this.updateSequenceDialog.old > this.updateSequenceDialog.new) {
+                                    for (let i = this.updateSequenceDialog.old - 1; i > this.updateSequenceDialog.new - 1; i--) {
+                                        this.updateSequenceDialog.data[list[j]][i] = this.updateSequenceDialog.data[list[j]][i - 1]
+                                    }
+                                    this.updateSequenceDialog.data[list[j]][this.updateSequenceDialog.new - 1] = oldValue
+                                }
+                                this.config[this.updateSequenceDialog.type][list[j]] = this.updateSequenceDialog.data[list[j]]
+                                this.updateSequenceDialog.show = false
+                            }
+                            this.save(this.config)
+                        }
+                    }
+                }
+            },
+            testConfig(value) {
+                const type = this.testDialog.type
+                const dataList = this.testDialog[type]
+                for (let i = 0; i < dataList.length; i++) {
+                    const key = dataList[i]
+                    if (key === 'immobilization' || key === 'return_ip') {
+                        for (let j = 0; j < this.config[key]['domain'].length; j++) {
+                            const data = this.config[key]['domain'][j]
+                            if (data.enable) {
+                                if (value.match(`^${data.data}$`)) {
+                                    alert(this.testDialog[`${type}Describe`][i])
+                                    return
+                                }
+                            }
+                        }
+                    } else {
+                        for (let j = 0; j < this.config[key].length; j++) {
+                            const data = this.config[key][j]
+                            console.log(this.config[key], key)
+                            if (data.enable) {
+                                if (value.match(`^${data.data}$`)) {
+                                    alert(this.testDialog[`${type}Describe`][i])
+                                    return
+                                }
+                            }
+                        }
+                    }
+                }
+                alert('没有匹配到任何值')
+            },
+            getIp(type, domain) {
+                if (this.reg.domainReg1.test(domain)) {
+                    request.post('/get_ip', {domain}).then(res => {
+                        if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
+                            this[type]['ip'] = res.data.ip
+                        } else {
+                            this.$message.error('解析失败')
+                        }
+                    })
+                } else {
+                    this.$message.error('请输入正确的域名')
+                }
+            },
+            enableConfig(string, data, type) {
+                if (string === 'immobilization' || string === 'return_ip') {
+                    this.config[string]['ip'][data].enable = type
+                    this.config[string]['domain'][data].enable = type
+                } else {
+                    data.enable = type
+                }
+                this.save(this.config)
+            }
+        },
+        mounted() {
+            this.loading = this.$loading({
+                lock: true,
+                text: 'Loading',
+                spinner: 'el-icon-loading',
+                background: 'rgba(0, 0, 0, 0.7)'
+            })
+            this.init()
+            this.log()
+        },
+        computed: {
+            filterLogList() {
+                const result = []
+                const list = []
+                this.logList.map(data => {
+                    const split = data.split(' ')
+                    let string = split[2] + split[4]
+                    if (result.indexOf(string) === -1) {
+                        result.push(string)
+                        list.push(data)
+                    }
+                })
+                return list
+            }
+        }
+    })
+</script>
+</html>

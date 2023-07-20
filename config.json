@@ -1,0 +1,42 @@
+{
+ "not_allow": [],
+ "allow": [],
+ "not_request": [],
+ "return_ip": {
+  "domain": [],
+  "ip": []
+ },
+ "refresh_cache_time": 1000,
+ "not_response": [],
+ "can_request": [
+  {
+   "data": ".*",
+   "enable": true
+  }
+ ],
+ "request_blacklist": [],
+ "response_blacklist": [],
+ "dnsservers": [
+  {
+   "data": "114.114.114.114",
+   "enable": true
+  },
+  {
+   "data": "8.8.8.8",
+   "enable": true
+  }
+ ],
+ "refresh_time": 2000,
+ "immobilization": {
+  "domain": [],
+  "ip": []
+ },
+ "filter_rule": [],
+ "screen_rule": [],
+ "is_screen": false,
+ "is_filter": false,
+ "port": 53,
+ "web_port": 5000,
+ "log_num": 90,
+ "is_deduplicate": false
+}
