@@ -204,28 +204,21 @@ class Config:
         with open('config.json', encoding='utf-8', mode='r') as f:
             config = json.loads(f.read())
             self.config = config
-        self.not_allow = [f'^{i["data"].strip()}$' for i in config['not_allow'] if
-                          i is not None and i != '' and i['enable']]
-        self.allow = [f'^{i["data"].strip()}$' for i in config['allow'] if i is not None and i != '' and i['enable']]
-        self.not_request = [f'^{i["data"].strip()}$' for i in config['not_request'] if
-                            i is not None and i != '' and i['enable']]
-        self.not_response = [f'^{i["data"].strip()}$' for i in config['not_response'] if
-                             i is not None and i != '' and i['enable']]
-        self.can_request = [f'^{i["data"].strip()}$' for i in config['can_request'] if
-                            i is not None and i != '' and i['enable']]
-        self.request_blacklist = [f'^{i["data"].strip()}$' for i in config['request_blacklist'] if
-                                  i is not None and i != '' and i['enable']]
-        self.response_blacklist = [f'^{i["data"].strip()}$' for i in config['response_blacklist'] if
-                                   i is not None and i != '' and i['enable']]
-        self.dns_servers = [i["data"] for i in config['dnsservers'] if i is not None and i != '' and i['enable']]
-        self.filter_rule = [i["data"] for i in config['filter_rule'] if i is not None and i != '' and i['enable']]
-        self.screen_rule = [i["data"] for i in config['screen_rule'] if i is not None and i != '' and i['enable']]
+        self.not_allow = self.get_enable_and_re_compile_list(config['not_allow'])
+        self.allow = self.get_enable_and_re_compile_list(config['allow'])
+        self.not_request = self.get_enable_and_re_compile_list(config['not_request'])
+        self.not_response = self.generate_ip_range(config['not_response'])
+        self.can_request = self.generate_ip_range(config['can_request'])
+        self.request_blacklist = self.get_enable_and_re_compile_list(config['request_blacklist'])
+        self.response_blacklist = self.get_enable_and_re_compile_list(config['response_blacklist'])
+        self.dns_servers = self.get_enable_list(config['dnsservers'])
+        self.filter_rule = self.get_enable_and_re_compile_list(config['filter_rule'])
+        self.screen_rule = self.get_enable_and_re_compile_list(config['screen_rule'])
 
-        self.immobilization = self.handle_ip(config['immobilization'])
-        self.return_ip = self.handle_ip(config['return_ip'])
+        self.immobilization = Config.handle_ip(config['immobilization'])
+        self.return_ip = Config.handle_ip(config['return_ip'])
 
-        self.dns_resolver.nameservers = [i["data"] for i in config['dnsservers'] if
-                                         i is not None and i != '' and i['enable']]
+        self.dns_resolver.nameservers = self.get_enable_list(config['dnsservers'])
         print('使用的dns服务器为： ', self.dns_resolver.nameservers)
         self.log_num = config['log_num']
         self.port = config['port']
@@ -315,13 +308,13 @@ class Config:
 
         if conf.is_filter:
             for filter_rule in conf.filter_rule:
-                if re.search(filter_rule, domain):
+                if filter_rule.search(domain):
                     return
 
-        if conf.is_screen:
+        if conf.is_screen and len(conf.screen_rule) > 0:
             flag = False
             for screen in conf.screen_rule:
-                if re.search(screen, domain):
+                if screen.search(domain):
                     flag = True
                     break
 
@@ -340,11 +333,12 @@ class Config:
         else:
             log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ' ' + data)
 
-    def handle_ip(self, data):
+    @staticmethod
+    def handle_ip(data):
         result = {}
         for k, v in data.items():
             if k == 'domain':
-                v = [f'^{i["data"].strip()}$' for i in v if i['enable']]
+                v = Config.get_enable_and_re_compile_list(v)
             else:
                 v = [i for i in v if i['enable']]
             result[k] = v
@@ -382,6 +376,23 @@ class Config:
         end_ip_int = self.ip_to_int(end_ip)
         return start_ip_int <= ip_int <= end_ip_int
 
+    def generate_ip_range(self, data):
+        data_list = []
+        for i in data:
+            if i is not None and i['enable']:
+                if '-' not in i['data']:
+                    data_list.append(re.compile(f'^{i["data"].strip()}$'))
+                else:
+                    data_list.append(i['data'].strip())
+        return data_list
+
+    @staticmethod
+    def get_enable_and_re_compile_list(data):
+        return [re.compile(f'^{i["data"].strip()}$') for i in data if i is not None and i != '' and i['enable']]
+
+    def get_enable_list(self, data):
+        return [i["data"].strip() for i in data if i is not None and i != '' and i['enable']]
+
 
 class DNSServer(socketserver.DatagramRequestHandler):
 
@@ -400,72 +411,75 @@ class DNSServer(socketserver.DatagramRequestHandler):
             logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {conf.cache[domain]["ip"]}')
             conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {conf.cache[domain]["ip"]}')
             return conf.cache[domain]['ip']
+        try:
+            # 查看域名是否在 固定域名和ip 里
+            if 'domain' in conf.immobilization:
+                for i in range(len(conf.immobilization['domain'])):
+                    if conf.immobilization['domain'][i].search(domain):
+                        return_ip = conf.immobilization["ip"][i]['data']
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        return return_ip
 
-        # 查看域名是否在 固定域名和ip 里
-        if 'domain' in conf.immobilization:
-            for i in range(len(conf.immobilization['domain'])):
-                if re.search(conf.immobilization['domain'][i], domain):
-                    return_ip = conf.immobilization["ip"][i]['data']
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                    return return_ip
+            # 正则匹配是否是允许访问的域名
+            for allow in conf.allow:
+                if allow.search(domain):
+                    try:
+                        ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
 
-        # 正则匹配是否是允许访问的域名
-        for allow in conf.allow:
-            if re.search(allow, domain):
-                try:
-                    ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+                        # 查看 ip 是否在 ip 黑名单里
+                        for response_blacklist in conf.response_blacklist:
+                            if response_blacklist.search(ip):
+                                logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                                conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                                return None
 
-                    # 查看 ip 是否在 ip 黑名单里
-                    for response_blacklist in conf.response_blacklist:
-                        if re.search(response_blacklist, ip):
-                            logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
-                            conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
-                            return None
+                        # 插入数据库
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
+                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
+                        conf.insert(domain, ip)
+                        return ip
+                    except:
+                        return None
 
-                    # 插入数据库
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
-                    conf.insert(domain, ip)
-                    return ip
-                except:
+            # 不向上请求的域名
+            for not_request in conf.not_request:
+                if not_request.search(domain):
+                    logger.info(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
+                    conf.log(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
                     return None
 
-        # 不向上请求的域名
-        for not_request in conf.not_request:
-            if re.search(not_request, domain):
-                logger.info(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
-                conf.log(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
-                return None
+            # 正则匹配请求域名是否在黑名单里
+            for request_blacklist in conf.request_blacklist:
+                if request_blacklist.search(domain):
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
+                    return None
 
-        # 正则匹配请求域名是否在黑名单里
-        for request_blacklist in conf.request_blacklist:
-            if re.search(request_blacklist, domain):
-                logger.info(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
-                conf.log(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
-                return None
+            # 查看域名是否在 固定域名和ip 里
+            if 'domain' in conf.return_ip:
+                for i in range(len(conf.return_ip['domain'])):
+                    if conf.return_ip['domain'][i].search(domain):
+                        return_ip = conf.return_ip["ip"][i]['data']
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        return return_ip
 
-        # 查看域名是否在 固定域名和ip 里
-        if 'domain' in conf.return_ip:
-            for i in range(len(conf.return_ip['domain'])):
-                if re.search(conf.return_ip['domain'][i], domain):
-                    return_ip = conf.return_ip["ip"][i]['data']
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                    return return_ip
+            # 正则匹配是否是不允许访问的域名
+            for not_allow in conf.not_allow:
+                if not_allow.search(domain):
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
+                    return None
 
-        # 正则匹配是否是不允许访问的域名
-        for not_allow in conf.not_allow:
-            if re.search(not_allow, domain):
-                logger.info(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
-                conf.log(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
-                return None
-
-        ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-        logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
-        conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
-        conf.insert(domain, ip)
-        return ip
+            ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
+            conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
+            conf.insert(domain, ip)
+            return ip
+        except Exception as e:
+            print(e)
+            return None
 
     def reply_for_not_found(self, income_record):
         header = DNSHeader(id=income_record.header.id, bitmap=income_record.header.bitmap, qr=1)
@@ -506,33 +520,32 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     income_record = DNSRecord.parse(message)
                     domain = str(income_record.q.qname).strip('.')
                 except:
-                    # conf.log(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
                     logger.error(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
                     continue
 
                 # 正则匹配请求 ip 是否在黑名单里
                 for not_response in conf.not_response:
-                    if '-' in not_response:
-                        start, end = not_response.strip('^').strip('$').split('-')
-                        if conf.is_ip_in_range(address[0], start, end):
+                    if type(not_response) == re.Pattern:
+                        if not_response.search(address[0]):
                             logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             return
                     else:
-                        if re.search(not_response, address[0]):
+                        start, end = not_response.split('-')
+                        if conf.is_ip_in_range(address[0], start, end):
                             logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             return
 
                 # 正则匹配请求 ip 是否是允许的ip
                 for can_request in conf.can_request:
-                    if '-' in can_request:
-                        start, end = can_request.strip('^').strip('$').split('-')
-                        if conf.is_ip_in_range(address[0], start, end):
+                    if type(can_request) == re.Pattern:
+                        if can_request.search(address[0]):
                             self.dns_handler(conn, income_record, address, domain)
                             return
                     else:
-                        if re.search(can_request, address[0]):
+                        start, end = can_request.split('-')
+                        if conf.is_ip_in_range(address[0], start, end):
                             self.dns_handler(conn, income_record, address, domain)
                             return
                 logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
@@ -594,23 +607,23 @@ def update_re():
         if k == 'not_allow':
             conf.cache = {}
             conf.write_file(conf)
-            conf.not_allow = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.not_allow = conf.get_enable_and_re_compile_list(v)
         elif k == 'allow':
             conf.cache = {}
             conf.write_file(conf)
-            conf.allow = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.allow = conf.get_enable_and_re_compile_list(v)
         elif k == 'not_request':
             conf.cache = {}
             conf.write_file(conf)
-            conf.not_request = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.not_request = conf.get_enable_and_re_compile_list(v)
         elif k == 'response_blacklist':
             conf.cache = {}
             conf.write_file(conf)
-            conf.response_blacklist = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.response_blacklist = conf.get_enable_and_re_compile_list(v)
         elif k == 'return_ip':
             conf.cache = {}
             conf.write_file(conf)
-            conf.return_ip = conf.handle_ip(v)
+            conf.return_ip = Config.handle_ip(v)
         elif k == 'refresh_cache_time':
             conf.is_fresh = True
             schedule.clear()
@@ -620,23 +633,23 @@ def update_re():
         elif k == 'not_response':
             conf.cache = {}
             conf.write_file(conf)
-            conf.not_response = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.not_response = conf.generate_ip_range(v)
         elif k == 'can_request':
             conf.cache = {}
             conf.write_file(conf)
-            conf.can_request = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.can_request = conf.generate_ip_range(v)
         elif k == 'request_blacklist':
             conf.cache = {}
             conf.write_file(conf)
-            conf.request_blacklist = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.request_blacklist = conf.get_enable_and_re_compile_list(v)
         elif k == 'screen_rule':
             conf.cache = {}
             conf.write_file(conf)
-            conf.screen_rule = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.screen_rule = conf.get_enable_and_re_compile_list(v)
         elif k == 'filter_rule':
             conf.cache = {}
             conf.write_file(conf)
-            conf.filter_rule = [f'^{i["data"].strip()}$' for i in v if i is not None and i != '' and i['enable']]
+            conf.filter_rule = conf.get_enable_and_re_compile_list(v)
         elif k == 'refresh_time':
             conf.config['refresh_time'] = int(v)
             conf.refresh_time = int(v)
@@ -649,12 +662,12 @@ def update_re():
         elif k == 'immobilization':
             conf.cache = {}
             conf.write_file(conf)
-            conf.immobilization = conf.handle_ip(v)
+            conf.immobilization = Config.handle_ip(v)
         elif k == 'dnsservers':
             conf.cache = {}
             conf.write_file(conf)
-            conf.dns_resolver.nameservers = [i["data"] for i in v if i is not None and i != '' and i['enable']]
-            conf.dns_servers = [i["data"] for i in v if i is not None and i != '' and i['enable']]
+            conf.dns_resolver.nameservers = conf.get_enable_list(v)
+            conf.dns_servers = conf.get_enable_list(v)
         elif k == 'port':
             conf.config['port'] = int(v)
             conf.port = int(v)
@@ -675,6 +688,18 @@ def get_log():
 
 def write_yaml(conf):
     data = conf.config
+    # print('not_allow', conf.not_allow)
+    # print('allow', conf.allow)
+    # print('not_request', conf.not_request)
+    # print('return_ip', conf.return_ip)
+    # print('not_response', conf.not_response)
+    # print('can_request', conf.can_request)
+    # print('request_blacklist', conf.request_blacklist)
+    # print('response_blacklist', conf.response_blacklist)
+    # print('dns_servers', conf.dns_servers)
+    # print('immobilization', conf.immobilization)
+    # print('filter_rule', conf.filter_rule)
+    # print('screen_rule', conf.screen_rule)
     with open('config.json', encoding="utf-8", mode="w") as f:
         f.write(json.dumps(data, cls=DateEncoder, indent=1, ensure_ascii=False))
 
