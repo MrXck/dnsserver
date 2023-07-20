@@ -354,7 +354,6 @@ class Config:
         return ip_address
 
     def set_dns(self, server):
-
         interfaces = psutil.net_if_addrs()
         # 遍历网卡信息，输出网卡名称
         for interface in interfaces:
@@ -368,8 +367,7 @@ class Config:
 
     @staticmethod
     def ip_to_int(ip):
-        packed_ip = socket.inet_aton(ip)
-        return struct.unpack("!I", packed_ip)[0]
+        return int.from_bytes(socket.inet_aton(ip), byteorder='big')
 
     def is_ip_in_range(self, ip, start_ip, end_ip):
         ip_int = self.ip_to_int(ip)
@@ -533,34 +531,48 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 except:
                     logger.error(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
                     continue
+                try:
+                    # 正则匹配请求 ip 是否在黑名单里
+                    not_flag = False
+                    for not_response in conf.not_response:
+                        if type(not_response) == re.Pattern:
+                            if not_response.search(address[0]):
+                                logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                not_flag = True
+                                break
+                        else:
+                            start, end = not_response.split('-')
+                            if int(start) <= conf.ip_to_int(address[0]) <= int(end):
+                                logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                not_flag = True
+                                break
+                    if not_flag:
+                        continue
 
-                # 正则匹配请求 ip 是否在黑名单里
-                for not_response in conf.not_response:
-                    if type(not_response) == re.Pattern:
-                        if not_response.search(address[0]):
-                            logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                            conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                            return
-                    else:
-                        start, end = not_response.split('-')
-                        if int(start) <= conf.ip_to_int(address[0]) <= int(end):
-                            logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                            conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                            return
+                    # 正则匹配请求 ip 是否是允许的ip
+                    can_flag = False
+                    for can_request in conf.can_request:
+                        if type(can_request) == re.Pattern:
+                            if can_request.search(address[0]):
+                                self.dns_handler(conn, income_record, address, domain)
+                                can_flag = True
+                                break
+                        else:
+                            start, end = can_request.split('-')
+                            if int(start) <= conf.ip_to_int(address[0]) <= int(end):
+                                self.dns_handler(conn, income_record, address, domain)
+                                can_flag = True
+                                break
 
-                # 正则匹配请求 ip 是否是允许的ip
-                for can_request in conf.can_request:
-                    if type(can_request) == re.Pattern:
-                        if can_request.search(address[0]):
-                            self.dns_handler(conn, income_record, address, domain)
-                            return
-                    else:
-                        start, end = can_request.split('-')
-                        if int(start) <= conf.ip_to_int(address[0]) <= int(end):
-                            self.dns_handler(conn, income_record, address, domain)
-                            return
-                logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
-                conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
+                    if can_flag:
+                        continue
+
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
+                except Exception as e:
+                    print(e)
             except Exception as e:
                 ...
 
