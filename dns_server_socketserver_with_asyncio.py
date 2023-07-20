@@ -207,8 +207,8 @@ class Config:
         self.not_allow = self.get_enable_and_re_compile_list(config['not_allow'])
         self.allow = self.get_enable_and_re_compile_list(config['allow'])
         self.not_request = self.get_enable_and_re_compile_list(config['not_request'])
-        self.not_response = self.generate_ip_range(config['not_response'])
-        self.can_request = self.generate_ip_range(config['can_request'])
+        self.not_response = Config.generate_ip_range(config['not_response'])
+        self.can_request = Config.generate_ip_range(config['can_request'])
         self.request_blacklist = self.get_enable_and_re_compile_list(config['request_blacklist'])
         self.response_blacklist = self.get_enable_and_re_compile_list(config['response_blacklist'])
         self.dns_servers = self.get_enable_list(config['dnsservers'])
@@ -366,7 +366,8 @@ class Config:
             subprocess.run(["netsh", "interface", "ipv4", "show", "dnsservers", interface],
                            capture_output=True)
 
-    def ip_to_int(self, ip):
+    @staticmethod
+    def ip_to_int(ip):
         packed_ip = socket.inet_aton(ip)
         return struct.unpack("!I", packed_ip)[0]
 
@@ -376,14 +377,16 @@ class Config:
         end_ip_int = self.ip_to_int(end_ip)
         return start_ip_int <= ip_int <= end_ip_int
 
-    def generate_ip_range(self, data):
+    @staticmethod
+    def generate_ip_range(data):
         data_list = []
         for i in data:
             if i is not None and i['enable']:
                 if '-' not in i['data']:
                     data_list.append(re.compile(f'^{i["data"].strip()}$'))
                 else:
-                    data_list.append(i['data'].strip())
+                    start, end = i['data'].strip().split('-')
+                    data_list.append(f'{Config.ip_to_int(start)}-{Config.ip_to_int(end)}')
         return data_list
 
     @staticmethod
@@ -540,7 +543,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                             return
                     else:
                         start, end = not_response.split('-')
-                        if conf.is_ip_in_range(address[0], start, end):
+                        if int(start) <= conf.ip_to_int(address[0]) <= int(end):
                             logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                             return
@@ -553,7 +556,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                             return
                     else:
                         start, end = can_request.split('-')
-                        if conf.is_ip_in_range(address[0], start, end):
+                        if int(start) <= conf.ip_to_int(address[0]) <= int(end):
                             self.dns_handler(conn, income_record, address, domain)
                             return
                 logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
