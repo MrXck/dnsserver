@@ -31,12 +31,26 @@
   "domain": [],
   "ip": []
  },
- "filter_rule": [],
- "screen_rule": [],
- "is_screen": false,
- "is_filter": false,
+ "filter_rule": [
+  {
+   "data": "v10.events.data.microsoft.com",
+   "enable": true
+  },
+  {
+   "data": "t14.baidu.com",
+   "enable": true
+  }
+ ],
+ "screen_rule": [
+  {
+   "data": "www.baidu.com",
+   "enable": true
+  }
+ ],
+ "is_screen": true,
+ "is_filter": true,
  "port": 53,
  "web_port": 5000,
  "log_num": 90,
- "is_deduplicate": false
+ "is_deduplicate": true
 }
