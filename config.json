@@ -15,12 +15,7 @@
   }
  ],
  "request_blacklist": [],
- "response_blacklist": [
-  {
-   "data": ".*",
-   "enable": true
-  }
- ],
+ "response_blacklist": [],
  "dnsservers": [
   {
    "data": "114.114.114.114",

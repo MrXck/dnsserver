@@ -473,9 +473,17 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     return None
 
             ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+
+            # 查看 ip 是否在 ip 黑名单里
+            for response_blacklist in conf.response_blacklist:
+                if response_blacklist.search(ip):
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                    return None
+
+            conf.insert(domain, ip)
             logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
             conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
-            conf.insert(domain, ip)
             return ip
         except Exception as e:
             print(e)
