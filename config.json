@@ -33,10 +33,10 @@
  },
  "filter_rule": [],
  "screen_rule": [],
- "is_screen": true,
- "is_filter": true,
+ "is_screen": false,
+ "is_filter": false,
  "port": 53,
  "web_port": 5000,
  "log_num": 90,
- "is_deduplicate": true
+ "is_deduplicate": false
 }

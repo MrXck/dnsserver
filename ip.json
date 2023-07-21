@@ -1,1 +1,27 @@
-{}
+{
+ "github.com": {
+  "ip": "20.205.243.166",
+  "create_time": "2023-07-21 08:23:21",
+  "update_time": "2023-07-21 08:23:21"
+ },
+ "www.google.com": {
+  "ip": "199.16.158.182",
+  "create_time": "2023-07-21 08:23:22",
+  "update_time": "2023-07-21 08:23:22"
+ },
+ "api.github.com": {
+  "ip": "20.205.243.168",
+  "create_time": "2023-07-21 08:23:22",
+  "update_time": "2023-07-21 08:23:22"
+ },
+ "chrome.autoteka.site": {
+  "ip": "93.90.216.44",
+  "create_time": "2023-07-21 08:23:22",
+  "update_time": "2023-07-21 08:23:22"
+ },
+ "safebrowsing.googleapis.com": {
+  "ip": "180.163.150.161",
+  "create_time": "2023-07-21 08:23:22",
+  "update_time": "2023-07-21 08:23:22"
+ }
+}

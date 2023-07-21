@@ -7,7 +7,6 @@ import queue
 import re
 import socket
 import socketserver
-import struct
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -28,35 +27,10 @@ log_path = os.getcwd() + os.sep + log_dir
 
 # logging 全局设置
 logging.basicConfig(level=logging.INFO,
-                    # level=__debug__,
-                    # format=log_format,
                     datefmt='%Y/%m/%d %H:%M:%S',
-                    # datefmt='%a, %d %b %Y %H:%M:%S',
-                    # filename='{0}.log'.format(fileName),
                     filemode='a')
 LOG_FORMAT = '%(asctime)s - %(levelname)s: %(message)s'
 formatter = logging.Formatter(LOG_FORMAT, "%Y-%m-%d %H:%M:%S")
-
-
-def get_myLogger(fileName='xxlog.log'):
-    fileName = log_path + os.sep + fileName
-    level = logging.INFO
-    logger = logging.getLogger(__name__)
-    logger.setLevel(level=level)
-
-    if not os.path.isdir(log_path):
-        os.makedirs(log_path)
-
-    timefilehandler = TimedRotatingFileHandler(fileName,
-                                               when='midnight',
-                                               interval=1,
-                                               backupCount=30)
-    timefilehandler.setLevel(level=level)
-    timefilehandler.setFormatter(formatter)
-    logger.addHandler(timefilehandler)
-
-    logger.info("file:{0}".format(fileName))
-    return logger
 
 
 class LogFilter:
@@ -74,8 +48,7 @@ class LogFilter:
 
 
 class TimeLoggerRolloverHandler(TimedRotatingFileHandler):
-    def __init__(self, filename, when='h', interval=1, backupCount=0, encoding='utf-8', delay=False, utc=False,
-                 atTime=None):
+    def __init__(self, filename, when='h', interval=1, backupCount=0, encoding='utf-8', delay=False, utc=False):
         super(TimeLoggerRolloverHandler, self).__init__(filename, when, interval, backupCount, encoding, delay, utc)
 
     def doRollover(self):
@@ -116,13 +89,12 @@ class TimeLoggerRolloverHandler(TimedRotatingFileHandler):
         newRolloverAt = self.computeRollover(currentTime)
         while newRolloverAt <= currentTime:
             newRolloverAt = newRolloverAt + self.interval
-        # If DST changes and midnight or weekly rollover, adjust for this.
         if (self.when == 'MIDNIGHT' or self.when.startswith('W')) and not self.utc:
             dstAtRollover = time.localtime(newRolloverAt)[-1]
             if dstNow != dstAtRollover:
-                if not dstNow:  # DST kicks in before next rollover, so we need to deduct an hour
+                if not dstNow:
                     addend = -3600
-                else:  # DST bows out before next rollover, so we need to add an hour
+                else:
                     addend = 3600
                 newRolloverAt += addend
         self.rolloverAt = newRolloverAt
@@ -515,7 +487,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 response = self.reply_for_A(income_record, ip=ip, ttl=60)
                 s.sendto(response.pack(), address)
                 return
-        # at last
+
         response = self.reply_for_not_found(income_record)
         s.sendto(response.pack(), address)
 
@@ -711,18 +683,6 @@ def get_log():
 
 def write_yaml(conf):
     data = conf.config
-    # print('not_allow', conf.not_allow)
-    # print('allow', conf.allow)
-    # print('not_request', conf.not_request)
-    # print('return_ip', conf.return_ip)
-    # print('not_response', conf.not_response)
-    # print('can_request', conf.can_request)
-    # print('request_blacklist', conf.request_blacklist)
-    # print('response_blacklist', conf.response_blacklist)
-    # print('dns_servers', conf.dns_servers)
-    # print('immobilization', conf.immobilization)
-    # print('filter_rule', conf.filter_rule)
-    # print('screen_rule', conf.screen_rule)
     with open('config.json', encoding="utf-8", mode="w") as f:
         f.write(json.dumps(data, cls=DateEncoder, indent=1, ensure_ascii=False))
 
@@ -763,7 +723,6 @@ def schedule_task():
 
 
 if __name__ == '__main__':
-    # process_queue = ProcessQueue()
     log_queue = queue.Queue()
     conf = Config()
     logger = get_myProjectLogger("dns", "log_filename", when='H', interval=1)
