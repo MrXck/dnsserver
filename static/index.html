@@ -203,11 +203,11 @@
                                            @click="showDialog(screenRuleDialog, scope.row)">编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteScreenRule(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('screen_rule', config.screen_rule[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('screen_rule', config.screen_rule[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -267,11 +267,11 @@
                                            @click="showDialog(filterRuleDialog, scope.row)">编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteFilterRule(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('filter_rule', config.filter_rule[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('filter_rule', config.filter_rule[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -322,10 +322,10 @@
                                            @click="showDialog(dnsServersDialog, scope.row)">编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteDnsServer(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('dnsservers', config.dnsservers[scope.$index], true)">启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('dnsservers', config.dnsservers[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -382,11 +382,11 @@
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteNotResponse(scope.row)">删除
                                 </el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('not_response', config.not_response[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('not_response', config.not_response[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -440,11 +440,11 @@
                                            @click="showDialog(canRequestDialog, scope.row)">编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteCanRequest(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('can_request', config.can_request[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('can_request', config.can_request[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -518,10 +518,10 @@
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteImmobilization(scope.row['data'])">删除
                                 </el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('immobilization', scope.$index, true)">启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('immobilization', scope.$index, false)">停用
                                 </el-button>
                                 <el-button type="success" size="mini"
@@ -576,10 +576,10 @@
                                            @click="showDialog(allowDialog, scope.row['data'])">编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteAllow(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('allow', config.allow[scope.$index], true)">启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('allow', config.allow[scope.$index], false)">停用
                                 </el-button>
                                 <el-button type="success" size="mini"
@@ -634,11 +634,11 @@
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteResponseBlacklist(scope.row)">删除
                                 </el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('response_blacklist', config.response_blacklist[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('response_blacklist', config.response_blacklist[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -693,11 +693,11 @@
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteNotRequest(scope.row)">删除
                                 </el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('not_request', config.not_request[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('not_request', config.not_request[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -754,11 +754,11 @@
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteRequestBlacklist(scope.row)">删除
                                 </el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('request_blacklist', config.request_blacklist[scope.$index], true)">
                                     启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('request_blacklist', config.request_blacklist[scope.$index], false)">
                                     停用
                                 </el-button>
@@ -830,10 +830,10 @@
                                     编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteReturnIp(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('return_ip', scope.$index, true)">启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('return_ip', scope.$index, false)">停用
                                 </el-button>
                                 <el-button type="success" size="mini"
@@ -887,10 +887,10 @@
                                     编辑
                                 </el-button>
                                 <el-button type="danger" size="mini" @click="deleteNotAllow(scope.row)">删除</el-button>
-                                <el-button v-if="!scope.row.enable" type="success" size="mini"
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
                                            @click="enableConfig('not_allow', config.not_allow[scope.$index], true)">启用
                                 </el-button>
-                                <el-button v-if="scope.row.enable" type="warning" size="mini"
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
                                            @click="enableConfig('not_allow', config.not_allow[scope.$index], false)">停用
                                 </el-button>
                                 <el-button type="success" size="mini"
