@@ -487,7 +487,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
             conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
             return ip
         except Exception as e:
-            print(e)
+            logger.error(f'请求ip {address[0]} 域名 {domain} 解析 ip 异常 异常为 {e}')
             return None
 
     def reply_for_not_found(self, income_record):
@@ -572,7 +572,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
                     conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
                 except Exception as e:
-                    print(e)
+                    logger.error(f'域名 {domain} 判断请求ip {address[0]} 是否为黑名单异常 异常为 {e}')
             except Exception as e:
                 ...
 
