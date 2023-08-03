@@ -67,7 +67,7 @@
                             >
                                 <template slot-scope="scope">
                                     {{ scope.row }}
-                                    <el-button type="primary" v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(' ')[4]) === -1" style="margin-left: 10px" size="small" @click="updateImmobilization(scope.row.split(' ')[2], scope.row.split(' ')[4], 'add')">添加到固定ip中</el-button>
+                                    <el-button type="primary" v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(' ')[4]) === -1" style="margin-left: 10px" size="mini" @click="updateImmobilization(scope.row.split(' ')[6], scope.row.split(' ')[4], 'add')">添加到固定ip中</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -1941,7 +1941,7 @@
             },
             deleteImmobilization(domain) {
                 if (Object.keys(this.config.immobilization).indexOf('domain') !== -1) {
-                    const index = this.config.immobilization['domain'].indexOf(domain)
+                    const index = this.config.immobilization['domain'].map(data => data.data).indexOf(domain)
                     this.config.immobilization['domain'].splice(index, 1)
                     this.config.immobilization['ip'].splice(index, 1)
                     this.save({
