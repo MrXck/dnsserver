@@ -403,8 +403,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         # 查看 ip 是否在 ip 黑名单里
                         for response_blacklist in conf.response_blacklist:
                             if response_blacklist.search(ip):
-                                logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
-                                conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                                logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在黑名单里 {ip}')
+                                conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
                                 return None
 
                         # 插入数据库
@@ -450,8 +450,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 查看 ip 是否在 ip 黑名单里
             for response_blacklist in conf.response_blacklist:
                 if response_blacklist.search(ip):
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip} 在ip黑名单里')
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
                     return None
 
             conf.insert(domain, ip)
