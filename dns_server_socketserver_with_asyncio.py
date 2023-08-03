@@ -703,8 +703,11 @@ async def dns_server(loop):
 def get_new_cache():
     now = datetime.datetime.now()
     for domain, ip_dict in conf.cache.items():
-        ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-        ip_dict['update_time'] = now
+        try:
+            ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            ip_dict['update_time'] = now
+        except:
+            continue
     conf.write_file_pool.submit(conf.write_file, conf)
 
 
