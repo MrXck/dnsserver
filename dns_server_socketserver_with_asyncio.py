@@ -14,7 +14,6 @@ from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
 from threading import Lock
 
-import dns.exception
 import jwt
 import psutil
 import schedule
@@ -621,6 +620,7 @@ def decorator_login(func):
         result = func(*args, **kwargs)
         result['token'] = create_token(conf.username)
         return jsonify(result)
+
     return wrapper
 
 
