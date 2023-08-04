@@ -782,27 +782,31 @@ def check_token():
 
 
 def try_login(data):
-    if request.remote_addr != conf.admin_ip:
-        seconds = datetime.datetime.now() - datetime.timedelta(seconds=conf.wait_second)
-        total_seconds = (seconds - conf.lately_login_time).total_seconds()
-        if total_seconds < 0:
-            return jsonify({'data': f'请等待 {-total_seconds} 秒后 再尝试登录'})
+    conf.lock.acquire()
+    try:
+        if request.remote_addr != conf.admin_ip:
+            seconds = datetime.datetime.now() - datetime.timedelta(seconds=conf.wait_second)
+            total_seconds = (seconds - conf.lately_login_time).total_seconds()
+            if total_seconds < 0:
+                return jsonify({'data': f'请等待 {-total_seconds} 秒后 再尝试登录'})
 
-    username = data.get('username', None)
-    password = data.get('password', None)
-    if username == conf.username and password == conf.password:
-        token = create_token(username)
-        conf.wait_second = 1
-        conf.fail_login_num = 0
-        return jsonify({'token': token})
-    else:
-        if request.remote_addr != conf.admin_ip and username == conf.username:
-            conf.fail_login_num += 1
-            conf.wait_second = conf.login_wait_second ** conf.fail_login_num
-            conf.lately_login_time = datetime.datetime.now()
-            print('等待：', conf.wait_second, '秒')
-        logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
-        return jsonify({'data': '登录失败'})
+        username = data.get('username', None)
+        password = data.get('password', None)
+        if username == conf.username and password == conf.password:
+            token = create_token(username)
+            conf.wait_second = 1
+            conf.fail_login_num = 0
+            return jsonify({'token': token})
+        else:
+            if request.remote_addr != conf.admin_ip and username == conf.username:
+                conf.fail_login_num += 1
+                conf.wait_second = conf.login_wait_second ** conf.fail_login_num
+                conf.lately_login_time = datetime.datetime.now()
+                print('等待：', conf.wait_second, '秒')
+            logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
+            return jsonify({'data': '登录失败'})
+    finally:
+        conf.lock.release()
 
 
 @app.route('/login', methods=['POST'])
