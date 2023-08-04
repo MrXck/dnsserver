@@ -60,14 +60,19 @@
                                 tooltip-effect="dark"
                                 style="width: 100%"
                                 border
-                                :height="300"
+                                :height="630"
                         >
                             <el-table-column
                                     label="日志"
                             >
                                 <template slot-scope="scope">
                                     {{ scope.row }}
-                                    <el-button type="primary" v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(' ')[4]) === -1 && reg.ipReg.test(scope.row.split(' ')[scope.row.split(' ').length - 1])" style="margin-left: 10px" size="mini" @click="updateImmobilization(scope.row.split(' ')[scope.row.split(' ').length - 1], scope.row.split(' ')[4], 'add')">添加到固定ip中</el-button>
+                                    <el-button type="primary"
+                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(' ')[4]) === -1 && reg.ipReg.test(scope.row.split(' ')[scope.row.split(' ').length - 1])"
+                                               style="margin-left: 10px" size="mini"
+                                               @click="updateImmobilization(scope.row.split(' ')[scope.row.split(' ').length - 1], scope.row.split(' ')[4], 'add')">
+                                        添加到固定ip中
+                                    </el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -125,6 +130,58 @@
                             </el-col>
                             <el-col :span="12">
                                 <el-button @click="updateWebPort">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            设置管理员ip
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.admin_ip"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button v-show="reg.ipReg.test(config.admin_ip)" @click="save(config)">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            配置页用户名
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.username"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="save(config)">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            配置页密码
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.password"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="save(config)">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            每次错误密码的等待时间系数
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.login_wait_second"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button @click="updateLoginWaitSecond">修改</el-button>
                             </el-col>
                         </el-row>
                     </div>
@@ -294,8 +351,11 @@
                         <el-col :span="12">
                             <el-input v-model="dnsservers" placeholder="请输入ip" clearable/>
                         </el-col>
-                        <el-col :span="12">
+                        <el-col :span="6">
                             <el-button @click="updateDnsServer(dnsservers, 'add')">增加</el-button>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-button @click="checkDns">测试</el-button>
                         </el-col>
                     </el-row>
                     <el-table
@@ -315,7 +375,9 @@
                         <el-table-column
                                 label="dns服务器ip"
                         >
-                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                            <template slot-scope="scope">{{ scope.row['data'] }} <span
+                                    v-show="dnsTestList.length > scope.$index">{{dnsTestList[scope.$index]}}</span>
+                            </template>
                         </el-table-column>
                         <el-table-column
                                 label="操作"
@@ -1323,20 +1385,29 @@
                 ipDescribe: ['不允许请求该dns服务器的ip', '不允许访问的ip', '允许请求该dns服务器的ip'],
                 domain: ['immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
                 domainDescribe: ['域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
-            }
+            },
+            dnsTestList: []
         },
         methods: {
             init() {
-                request.get('/all').then(res => {
-                    this.config = res.data
+                request.get('/all', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                    if (res.data.code === 401) {
+                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                    }
+                    this.config = res.data.data
+                    localStorage.setItem('token', res.data.token)
                 }).finally(() => {
                     this.loading.close()
                     // this.drop()
                 })
 
-                request.get('/get_self_ip').then(res => {
+                request.get('/get_self_ip', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                    if (res.data.code === 401) {
+                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                    }
                     try {
-                        this.dns_ip = res.data[0]
+                        this.dns_ip = res.data.ip[0]
+                        localStorage.setItem('token', res.data.token)
                     } catch (e) {
                         this.dns_ip = ''
                     }
@@ -1713,9 +1784,11 @@
                 }
             },
             updateSelfDns() {
-                console.log(this.dns_ip)
                 if (this.reg.ipReg.test(this.dns_ip)) {
-                    request.post('/set_dns', {dns: this.dns_ip}).then(res => {
+                    request.post('/set_dns', {dns: this.dns_ip}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                        if (res.data.code === 401) {
+                            location.href = `http://${location.hostname}:${location.port}/login.html`
+                        }
                         if (res.data.code === 0) {
                             this.$message.success(`设置成功`)
                         } else if (res.data.code === 2) {
@@ -1723,6 +1796,7 @@
                         } else {
                             this.$message.error('设置失败')
                         }
+                        localStorage.setItem('token', res.data.token)
                     })
                 } else {
                     this.$message.error('请输入正确的ip')
@@ -1950,14 +2024,22 @@
                 }
             },
             save(data) {
-                request.post('/update', data).then(res => {
+                request.post('/update', data, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                    if (res.data.code === 401) {
+                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                    }
+                    localStorage.setItem('token', res.data.token)
                 }).finally(() => {
                     this.init()
                 })
             },
             log() {
-                request.get('/log').then(res => {
-                    this.logList = res.data
+                request.get('/log', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                    if (res.data.code === 401) {
+                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                    }
+                    this.logList = res.data.data
+                    localStorage.setItem('token', res.data.token)
                 })
             },
             logRefresh() {
@@ -2067,7 +2149,6 @@
                     } else {
                         for (let j = 0; j < this.config[key].length; j++) {
                             const data = this.config[key][j]
-                            console.log(this.config[key], key)
                             if (data.enable) {
                                 if (value.match(`^${data.data}$`)) {
                                     alert(this.testDialog[`${type}Describe`][i])
@@ -2081,12 +2162,16 @@
             },
             getIp(type, domain) {
                 if (this.reg.domainReg1.test(domain)) {
-                    request.post('/get_ip', {domain}).then(res => {
+                    request.post('/get_ip', {domain}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                        if (res.data.code === 401) {
+                            location.href = `http://${location.hostname}:${location.port}/login.html`
+                        }
                         if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
                             this[type]['ip'] = res.data.ip
                         } else {
                             this.$message.error('解析失败')
                         }
+                        localStorage.setItem('token', res.data.token)
                     })
                 } else {
                     this.$message.error('请输入正确的域名')
@@ -2100,6 +2185,25 @@
                     data.enable = type
                 }
                 this.save(this.config)
+            },
+            updateLoginWaitSecond() {
+                if (!this.reg.notNumReg.test(this.config.login_wait_second)) {
+                    this.save({
+                        'login_wait_second': this.config.login_wait_second
+                    })
+                } else {
+                    this.$message.error('请输入数字')
+                }
+            },
+            checkDns() {
+                request.get('/check_dns', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                    if (res.data.code === 401) {
+                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                    }
+                    localStorage.setItem('token', res.data.token)
+                    this.dnsTestList = res.data.data
+                    console.log(res.data.data)
+                })
             }
         },
         mounted() {
@@ -2116,8 +2220,6 @@
             filterLogList() {
                 const result = []
                 let list = JSON.parse(JSON.stringify(this.logList))
-                console.log(this.config.is_screen, this.config.is_deduplicate, this.config.is_filter)
-                console.log(list)
                 if (this.config.is_screen) {
                     list = list.filter((data, index, arr) => {
                         const split = data.split(' ')
@@ -2126,7 +2228,7 @@
                             const item = this.config.screen_rule[i]
                             if (item.enable) {
                                 let str = `^${item.data}$`
-                                if (str.match(split[4])) {
+                                if (split[4].match(str)) {
                                     return true
                                 }
                             }
@@ -2150,7 +2252,7 @@
                             const item = this.config.filter_rule[i]
                             if (item.enable) {
                                 let str = `^${item.data}$`
-                                if (str.match(split[4])) {
+                                if (split[4].match(str)) {
                                     return false
                                 }
                             }

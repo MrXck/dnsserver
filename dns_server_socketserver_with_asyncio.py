@@ -10,15 +10,51 @@ import socketserver
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
 from threading import Lock
 
+import dns.exception
+import jwt
 import psutil
 import schedule
 from dns.resolver import Resolver
 from dnslib import DNSRecord, QTYPE, DNSHeader, RR, A
 from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
+
+JWT_SALT = 'fgdkljdlkfa#^&%^@$^!*^*($&@fdiskhgjfkdhfidofds*&^%&$%&'
+
+
+def create_token(data, timeout=120):
+    headers = {
+        'type': 'jwt',
+        'alg': 'HS256'
+    }
+    payload = {'data': data, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=timeout)}
+    result = jwt.encode(payload=payload, key=JWT_SALT, algorithm='HS256', headers=headers)
+    return result
+
+
+def parse_payload(token):
+    result = {
+        'status': False,
+        'data': None,
+        'error': None
+    }
+
+    try:
+        verified_payload = jwt.decode(token, JWT_SALT, algorithms='HS256')
+        result['status'] = True
+        result['data'] = verified_payload
+    except jwt.exceptions.ExpiredSignatureError:
+        result['error'] = 'token已失效'
+    except jwt.DecodeError:
+        result['error'] = 'token认证失败'
+    except jwt.InvalidTokenError:
+        result['error'] = '非法的token'
+    return result
+
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -167,9 +203,15 @@ class Config:
     web_port = 53
     log_num = 20
     dns_resolver = Resolver()
+    check_dns_resolver = Resolver()
     refresh_cache_time = 0
+    fail_login_num = 0
+    login_wait_second = 2
+    username = ''
+    password = ''
     is_fresh = False
     config = {}
+    admin_ip = '127.0.0.1'
 
     def __init__(self):
         self.cache = self.select_all()
@@ -200,6 +242,12 @@ class Config:
         self.is_deduplicate = config['is_deduplicate']
         self.refresh_cache_time = config['refresh_cache_time']
         self.refresh_time = config['refresh_time']
+        self.username = config['username']
+        self.password = config['password']
+        self.login_wait_second = config['login_wait_second']
+        self.admin_ip = config['admin_ip']
+        self.lately_login_time = datetime.datetime.now()
+        self.wait_second = 1
 
     @staticmethod
     def _insert(self, domain, ip):
@@ -336,6 +384,14 @@ class Config:
             # 输出修改后的DNS服务器地址
             subprocess.run(["netsh", "interface", "ipv4", "show", "dnsservers", interface],
                            capture_output=True)
+
+    def check_dns_server(self, server_ip):
+        try:
+            conf.check_dns_resolver.nameservers = [server_ip]
+            conf.check_dns_resolver.resolve('www.baidu.com', 'A')[0].to_text()
+            return 1  # DNS 服务器响应正常
+        except:
+            return 2  # DNS 服务器不可用
 
     @staticmethod
     def ip_to_int(ip):
@@ -554,15 +610,31 @@ def index():
     return redirect('/index.html')
 
 
+# 定义登录装饰器，判断用户是否登录
+def decorator_login(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        authorization = request.headers.get('Authorization')
+        token_result = parse_payload(authorization)
+        if not token_result['status']:
+            return jsonify({'code': 401})
+        result = func(*args, **kwargs)
+        result['token'] = create_token(conf.username)
+        return jsonify(result)
+    return wrapper
+
+
 @app.route('/all')
+@decorator_login
 def all_data():
     f = open('config.json', encoding='utf-8', mode='r')
     data = json.loads(f.read())
     f.close()
-    return jsonify(data)
+    return {'data': data}
 
 
 @app.route('/get_ip', methods=['POST'])
+@decorator_login
 def get_ip():
     data = request.get_json()
     domain = data.get('domain', None)
@@ -572,10 +644,11 @@ def get_ip():
             result['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
         except:
             pass
-    return jsonify(result)
+    return result
 
 
 @app.route('/set_dns', methods=['POST'])
+@decorator_login
 def set_dns():
     data = request.get_json()
     dns_ip = data.get('dns', None)
@@ -586,17 +659,27 @@ def set_dns():
             return jsonify(result)
         except:
             return jsonify({'code': 2})
-    return jsonify({'code': 1})
+    return {'code': 1}
 
 
 @app.route('/get_self_ip')
+@decorator_login
 def get_self_ip():
-    return jsonify(conf.get_ip_list())
+    self_ip = ''
+    try:
+        self_ip = conf.get_ip_list()
+    except:
+        pass
+    return {'ip': self_ip}
 
 
 @app.route('/update', methods=['POST'])
+@decorator_login
 def update_re():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except:
+        return '请正确携带参数'
     for k, v in data.items():
         conf.config[k] = v
         if k == 'not_allow':
@@ -672,13 +755,81 @@ def update_re():
         elif k == 'log_num':
             conf.config['log_num'] = int(v)
             conf.log_num = int(v)
+        elif k == 'username':
+            conf.config['username'] = v
+            conf.username = v
+        elif k == 'password':
+            conf.config['password'] = v
+            conf.password = v
+        elif k == 'login_wait_second':
+            conf.config['login_wait_second'] = int(v)
+            conf.login_wait_second = int(v)
     write_yaml(conf)
-    return 'ok'
+    return {'data': 'ok'}
 
 
 @app.route('/log')
+@decorator_login
 def get_log():
-    return jsonify(list(log_queue.queue)[::-1])
+    return {'data': list(log_queue.queue)[::-1]}
+
+
+def check_token():
+    authorization = request.headers.get('Authorization')
+    token_result = parse_payload(authorization)
+    if not token_result['status']:
+        return '请登录后再进行操作'
+
+
+def try_login(data):
+    if request.remote_addr != conf.admin_ip:
+        seconds = datetime.datetime.now() - datetime.timedelta(seconds=conf.wait_second)
+        total_seconds = (seconds - conf.lately_login_time).total_seconds()
+        if total_seconds < 0:
+            return jsonify({'data': f'请等待 {-total_seconds} 秒后 再尝试登录'})
+
+    username = data.get('username', None)
+    password = data.get('password', None)
+    if username == conf.username and password == conf.password:
+        token = create_token(username)
+        conf.wait_second = 1
+        conf.fail_login_num = 0
+        return jsonify({'token': token})
+    else:
+        if request.remote_addr != conf.admin_ip and username == conf.username:
+            conf.fail_login_num += 1
+            conf.wait_second = conf.login_wait_second ** conf.fail_login_num
+            conf.lately_login_time = datetime.datetime.now()
+            print('等待：', conf.wait_second, '秒')
+        logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
+        return jsonify({'data': '登录失败'})
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        return try_login(data)
+    except:
+        return jsonify({'data': '请正确携带参数'})
+
+
+@app.route('/check_dns')
+@decorator_login
+def check_dns():
+    result = []
+    for i in conf.dns_servers:
+        start = time.time()
+        status = conf.check_dns_server(i)
+        end = time.time() - start
+        if status == 1:
+            result.append(f'在线/耗时:{round(end * 1000, 3)}ms')
+        elif status == 2:
+            result.append('未收到响应')
+        else:
+            result.append('报错')
+
+    return {'data': result}
 
 
 def write_yaml(conf):
@@ -691,7 +842,7 @@ def run():
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     print('web服务端口为：' + str(conf.web_port))
-    app.run(host='127.0.0.1', port=conf.web_port)
+    app.run(host='0.0.0.0', port=conf.web_port)
 
 
 async def dns_server(loop):

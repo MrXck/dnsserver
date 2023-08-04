@@ -38,5 +38,9 @@
  "port": 53,
  "web_port": 5000,
  "log_num": 90,
- "is_deduplicate": false
+ "is_deduplicate": false,
+ "username": "jcy",
+ "password": "Jcy11111111",
+ "login_wait_second": 2,
+ "admin_ip": "127.0.0.1"
 }
