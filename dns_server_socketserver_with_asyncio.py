@@ -433,11 +433,11 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     seconds=conf.refresh_time) < datetime.datetime.now():
                 ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
                 conf.update(domain, ip)
-                logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {ip}')
-                conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {ip}')
+                logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
+                conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
                 return ip
-            logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {conf.cache[domain]["ip"]}')
-            conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存 返回的ip {conf.cache[domain]["ip"]}')
+            logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {conf.cache[domain]["ip"]}')
+            conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {conf.cache[domain]["ip"]}')
             return conf.cache[domain]['ip']
         try:
             # 查看域名是否在 固定域名和ip 里
@@ -445,8 +445,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 for i in range(len(conf.immobilization['domain'])):
                     if conf.immobilization['domain'][i].search(domain):
                         return_ip = conf.immobilization["ip"][i]['data']
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
                         return return_ip
 
             # 正则匹配是否是允许访问的域名
@@ -473,8 +473,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 不向上请求的域名
             for not_request in conf.not_request:
                 if not_request.search(domain):
-                    logger.info(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
-                    conf.log(f'{address[0]} 请求解析域名为 {domain} 不返回结果')
+                    logger.info(f'{address[0]} 请求解析域名 {domain} 不返回结果')
+                    conf.log(f'{address[0]} 请求解析域名 {domain} 不返回结果')
                     return None
 
             # 正则匹配请求域名是否在黑名单里
@@ -489,8 +489,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 for i in range(len(conf.return_ip['domain'])):
                     if conf.return_ip['domain'][i].search(domain):
                         return_ip = conf.return_ip["ip"][i]['data']
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
-                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回 固定ip {return_ip}')
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
                         return return_ip
 
             # 正则匹配是否是不允许访问的域名
@@ -514,7 +514,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
             conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
             return ip
         except Exception as e:
-            logger.error(f'请求ip {address[0]} 域名 {domain} 解析 ip 异常 异常为 {e}')
+            logger.error(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
             return None
 
     def reply_for_not_found(self, income_record):
@@ -599,7 +599,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
                     conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
                 except Exception as e:
-                    logger.error(f'域名 {domain} 判断请求ip {address[0]} 是否为黑名单异常 异常为 {e}')
+                    logger.error(f'{address[0]} 请求解析域名 {domain} 是否为黑名单异常异常为{e}')
             except Exception as e:
                 ...
 

@@ -2222,13 +2222,12 @@
                 let list = JSON.parse(JSON.stringify(this.logList))
                 if (this.config.is_screen) {
                     list = list.filter((data, index, arr) => {
-                        const split = data.split(' ')
-
+                        // const split = data.split(' ')
                         for (let i = 0; i < this.config.screen_rule.length; i++) {
                             const item = this.config.screen_rule[i]
                             if (item.enable) {
                                 let str = `^${item.data}$`
-                                if (split[4].match(str)) {
+                                if (data.match(str)) {
                                     return true
                                 }
                             }
