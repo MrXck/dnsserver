@@ -211,7 +211,7 @@
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
-                            <el-input v-model="screen_rule" placeholder="请输入域名" clearable/>
+                            <el-input v-model="screen_rule" placeholder="请输入要筛选的项" clearable/>
                         </el-col>
                         <el-col :span="5">
                             <el-button @click="updateScreenRule(screen_rule, 'add')">增加</el-button>
@@ -251,7 +251,7 @@
                             <template slot-scope="scope">{{ scope.$index + 1 }}</template>
                         </el-table-column>
                         <el-table-column
-                                label="筛选的域名"
+                                label="筛选项"
                         >
                             <template slot-scope="scope">{{ scope.row['data'] }}</template>
                         </el-table-column>
@@ -1392,7 +1392,7 @@
             init() {
                 request.get('/all', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
-                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                        location.href = `https://${location.hostname}:${location.port}/login.html`
                     }
                     this.config = res.data.data
                     localStorage.setItem('token', res.data.token)
@@ -1403,7 +1403,7 @@
 
                 request.get('/get_self_ip', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
-                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                        location.href = `https://${location.hostname}:${location.port}/login.html`
                     }
                     try {
                         this.dns_ip = res.data.ip[0]
@@ -1787,7 +1787,7 @@
                 if (this.reg.ipReg.test(this.dns_ip)) {
                     request.post('/set_dns', {dns: this.dns_ip}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                         if (res.data.code === 401) {
-                            location.href = `http://${location.hostname}:${location.port}/login.html`
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
                         }
                         if (res.data.code === 0) {
                             this.$message.success(`设置成功`)
@@ -2026,7 +2026,7 @@
             save(data) {
                 request.post('/update', data, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
-                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                        location.href = `https://${location.hostname}:${location.port}/login.html`
                     }
                     localStorage.setItem('token', res.data.token)
                 }).finally(() => {
@@ -2036,7 +2036,7 @@
             log() {
                 request.get('/log', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
-                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                        location.href = `https://${location.hostname}:${location.port}/login.html`
                     }
                     this.logList = res.data.data
                     localStorage.setItem('token', res.data.token)
@@ -2164,7 +2164,7 @@
                 if (this.reg.domainReg1.test(domain)) {
                     request.post('/get_ip', {domain}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                         if (res.data.code === 401) {
-                            location.href = `http://${location.hostname}:${location.port}/login.html`
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
                         }
                         if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
                             this[type]['ip'] = res.data.ip
@@ -2198,7 +2198,7 @@
             checkDns() {
                 request.get('/check_dns', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
-                        location.href = `http://${location.hostname}:${location.port}/login.html`
+                        location.href = `https://${location.hostname}:${location.port}/login.html`
                     }
                     localStorage.setItem('token', res.data.token)
                     this.dnsTestList = res.data.data
@@ -2223,10 +2223,11 @@
                 if (this.config.is_screen) {
                     list = list.filter((data, index, arr) => {
                         // const split = data.split(' ')
+                        debugger
                         for (let i = 0; i < this.config.screen_rule.length; i++) {
                             const item = this.config.screen_rule[i]
                             if (item.enable) {
-                                let str = `^${item.data}$`
+                                let str = `${item.data}`
                                 if (data.match(str)) {
                                     return true
                                 }

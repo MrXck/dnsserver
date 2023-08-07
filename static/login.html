@@ -273,8 +273,8 @@
                 request.post('/login', this.login).then(res => {
                     if ('token' in res.data) {
                         localStorage.setItem('token', res.data.token)
-                        console.log(`http://${location.hostname}:${location.port}`)
-                        location.href = `http://${location.hostname}:${location.port}`
+                        console.log(`https://${location.hostname}:${location.port}`)
+                        location.href = `https://${location.hostname}:${location.port}`
                     } else {
                         this.LoginError = res.data.data
                     }

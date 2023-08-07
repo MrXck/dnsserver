@@ -802,7 +802,6 @@ def try_login(data):
                 conf.fail_login_num += 1
                 conf.wait_second = conf.login_wait_second ** conf.fail_login_num
                 conf.lately_login_time = datetime.datetime.now()
-                print('等待：', conf.wait_second, '秒')
             logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
             return jsonify({'data': '登录失败'})
     finally:
@@ -846,7 +845,10 @@ def run():
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     print('web服务端口为：' + str(conf.web_port))
-    app.run(host='0.0.0.0', port=conf.web_port)
+    try:
+        app.run(host='0.0.0.0', port=conf.web_port, ssl_context=('server.crt', 'server.key'))
+    except Exception as e:
+        print(e)
 
 
 async def dns_server(loop):
