@@ -779,7 +779,7 @@ def update_re():
             conf.login_wait_second = int(v)
         elif k == 'admin_ip':
             conf.config['admin_ip'] = v
-            conf.login_wait_second = v
+            conf.admin_ip = v
     write_yaml(conf)
     return {'data': 'ok'}
 
