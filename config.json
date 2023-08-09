@@ -6,7 +6,7 @@
   "domain": [],
   "ip": []
  },
- "refresh_cache_time": 20,
+ "refresh_cache_time": 1000,
  "not_response": [],
  "can_request": [
   {
@@ -26,7 +26,7 @@
    "enable": true
   }
  ],
- "refresh_time": 40,
+ "refresh_time": 2000,
  "immobilization": {
   "domain": [],
   "ip": []
@@ -38,7 +38,7 @@
    "enable": true
   }
  ],
- "is_screen": true,
+ "is_screen": false,
  "is_filter": false,
  "port": 53,
  "web_port": 5000,
