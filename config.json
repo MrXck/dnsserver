@@ -6,7 +6,7 @@
   "domain": [],
   "ip": []
  },
- "refresh_cache_time": 1000,
+ "refresh_cache_time": 20,
  "not_response": [],
  "can_request": [
   {
@@ -26,14 +26,19 @@
    "enable": true
   }
  ],
- "refresh_time": 2000,
+ "refresh_time": 40,
  "immobilization": {
   "domain": [],
   "ip": []
  },
  "filter_rule": [],
- "screen_rule": [],
- "is_screen": false,
+ "screen_rule": [
+  {
+   "data": "www.baidu.com",
+   "enable": true
+  }
+ ],
+ "is_screen": true,
  "is_filter": false,
  "port": 53,
  "web_port": 5000,

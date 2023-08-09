@@ -9,6 +9,7 @@ import socket
 import socketserver
 import subprocess
 import time
+import copy
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
@@ -211,9 +212,12 @@ class Config:
     is_fresh = False
     config = {}
     admin_ip = '127.0.0.1'
+    use_cache_bak = False
+    symbol = '✦'
 
     def __init__(self):
         self.cache = self.select_all()
+        self.cache_bak = copy.deepcopy(self.cache)
         with open('config.json', encoding='utf-8', mode='r') as f:
             config = json.loads(f.read())
             self.config = config
@@ -226,7 +230,7 @@ class Config:
         self.response_blacklist = self.get_enable_and_re_compile_list(config['response_blacklist'])
         self.dns_servers = self.get_enable_list(config['dnsservers'])
         self.filter_rule = self.get_enable_and_re_compile_list(config['filter_rule'])
-        self.screen_rule = self.get_enable_and_re_compile_list(config['screen_rule'])
+        self.screen_rule = self.get_enable_and_re_compile_list_with_not_exact_match(config['screen_rule'])
 
         self.immobilization = Config.handle_ip(config['immobilization'])
         self.return_ip = Config.handle_ip(config['return_ip'])
@@ -316,7 +320,7 @@ class Config:
     @staticmethod
     def _log(self, data):
         qsize = log_queue.qsize()
-        data_split = data.split(' ')
+        data_split = data.split(conf.symbol)
         q_list = list(log_queue.queue)
 
         try:
@@ -333,7 +337,7 @@ class Config:
         if conf.is_screen and len(conf.screen_rule) > 0:
             flag = False
             for screen in conf.screen_rule:
-                if screen.search(domain):
+                if screen.search(data):
                     flag = True
                     break
 
@@ -348,9 +352,9 @@ class Config:
         if qsize >= self.log_num:
             for i in range(qsize - self.log_num + 1):
                 log_queue.get()
-            log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ' ' + data)
+            log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + data)
         else:
-            log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ' ' + data)
+            log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + data)
 
     @staticmethod
     def handle_ip(data):
@@ -414,12 +418,27 @@ class Config:
                     data_list.append(f'{Config.ip_to_int(start)}-{Config.ip_to_int(end)}')
         return data_list
 
+    def get_cache_ip(self, domain, address, cache_data):
+        if cache_data[domain]['update_time'] + datetime.timedelta(
+                seconds=conf.refresh_time) < datetime.datetime.now():
+            ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            conf.update(domain, ip)
+            logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
+            conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{ip}{conf.symbol}')
+            return ip
+        logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
+        conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{cache_data[domain]["ip"]}{conf.symbol}')
+        return cache_data[domain]['ip']
+
     @staticmethod
     def get_enable_and_re_compile_list(data):
         return [re.compile(f'^{i["data"].strip()}$') for i in data if i is not None and i != '' and i['enable']]
 
     def get_enable_list(self, data):
         return [i["data"].strip() for i in data if i is not None and i != '' and i['enable']]
+
+    def get_enable_and_re_compile_list_with_not_exact_match(self, data):
+        return [re.compile(f'{i["data"].strip()}') for i in data if i is not None and i != '' and i['enable']]
 
 
 class DNSServer(socketserver.DatagramRequestHandler):
@@ -428,17 +447,11 @@ class DNSServer(socketserver.DatagramRequestHandler):
         domain = domain.lower().strip()
 
         # 查看域名是否在缓存里
-        if domain in conf.cache:
-            if conf.cache[domain]['update_time'] + datetime.timedelta(
-                    seconds=conf.refresh_time) < datetime.datetime.now():
-                ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-                conf.update(domain, ip)
-                logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
-                conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
-                return ip
-            logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {conf.cache[domain]["ip"]}')
-            conf.log(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {conf.cache[domain]["ip"]}')
-            return conf.cache[domain]['ip']
+        if domain in conf.cache and not conf.use_cache_bak:
+            return conf.get_cache_ip(domain, address, conf.cache_bak)
+        elif domain in conf.cache and conf.use_cache_bak:
+            return conf.get_cache_ip(domain, address, conf.cache_bak)
+
         try:
             # 查看域名是否在 固定域名和ip 里
             if 'domain' in conf.immobilization:
@@ -446,7 +459,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     if conf.immobilization['domain'][i].search(domain):
                         return_ip = conf.immobilization["ip"][i]['data']
                         logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
-                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回固定ip{conf.symbol}{return_ip}{conf.symbol}')
                         return return_ip
 
             # 正则匹配是否是允许访问的域名
@@ -459,12 +472,12 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         for response_blacklist in conf.response_blacklist:
                             if response_blacklist.search(ip):
                                 logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在黑名单里 {ip}')
-                                conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+                                conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                                 return None
 
                         # 插入数据库
                         logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
-                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
+                        conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip{conf.symbol}{ip}{conf.symbol}')
                         conf.insert(domain, ip)
                         return ip
                     except:
@@ -474,14 +487,14 @@ class DNSServer(socketserver.DatagramRequestHandler):
             for not_request in conf.not_request:
                 if not_request.search(domain):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 不返回结果')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 不返回结果')
+                    conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}不返回结果{conf.symbol}')
                     return None
 
             # 正则匹配请求域名是否在黑名单里
             for request_blacklist in conf.request_blacklist:
                 if request_blacklist.search(domain):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
+                    conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}被黑名单拦截{conf.symbol}')
                     return None
 
             # 查看域名是否在 固定域名和ip 里
@@ -490,14 +503,14 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     if conf.return_ip['domain'][i].search(domain):
                         return_ip = conf.return_ip["ip"][i]['data']
                         logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
-                        conf.log(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回固定ip{conf.symbol}{return_ip}{conf.symbol}')
                         return return_ip
 
             # 正则匹配是否是不允许访问的域名
             for not_allow in conf.not_allow:
                 if not_allow.search(domain):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
+                    conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}是不允许访问的域名')
                     return None
 
             ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
@@ -506,12 +519,12 @@ class DNSServer(socketserver.DatagramRequestHandler):
             for response_blacklist in conf.response_blacklist:
                 if response_blacklist.search(ip):
                     logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+                    conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                     return None
 
             conf.insert(domain, ip)
             logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
-            conf.log(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
+            conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}ip为{conf.symbol}{ip}{conf.symbol}')
             return ip
         except Exception as e:
             logger.error(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
@@ -565,14 +578,14 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         if type(not_response) == re.Pattern:
                             if not_response.search(address[0]):
                                 logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                                conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
                                 break
                         else:
                             start, end = not_response.split('-')
                             if int(start) <= conf.ip_to_int(address[0]) <= int(end):
                                 logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                                conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
                                 break
                     if not_flag:
@@ -597,7 +610,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         continue
 
                     logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
-                    conf.log(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
+                    conf.log(f'{conf.symbol}{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}没有被允许')
                 except Exception as e:
                     logger.error(f'{address[0]} 请求解析域名 {domain} 是否为黑名单异常异常为{e}')
             except Exception as e:
@@ -723,7 +736,7 @@ def update_re():
         elif k == 'screen_rule':
             conf.cache = {}
             conf.write_file(conf)
-            conf.screen_rule = conf.get_enable_and_re_compile_list(v)
+            conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
         elif k == 'filter_rule':
             conf.cache = {}
             conf.write_file(conf)
@@ -764,6 +777,9 @@ def update_re():
         elif k == 'login_wait_second':
             conf.config['login_wait_second'] = int(v)
             conf.login_wait_second = int(v)
+        elif k == 'admin_ip':
+            conf.config['admin_ip'] = v
+            conf.login_wait_second = v
     write_yaml(conf)
     return {'data': 'ok'}
 
@@ -859,12 +875,15 @@ async def dns_server(loop):
 
 def get_new_cache():
     now = datetime.datetime.now()
+    conf.use_cache_bak = True
     for domain, ip_dict in conf.cache.items():
         try:
             ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
             ip_dict['update_time'] = now
         except:
             continue
+    conf.use_cache_bak = False
+    conf.cache_bak = copy.deepcopy(conf.cache)
     conf.write_file_pool.submit(conf.write_file, conf)
 
 

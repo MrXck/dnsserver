@@ -83,6 +83,16 @@
                 <el-card style="display: flex;flex-direction: column;justify-content: space-between">
                     <div>
                         <el-row>
+                            退出登录
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-button @click="logout">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row>
                             配置的缓存刷新时间(单位: 秒)
                         </el-row>
                         <el-row :gutter="20" style="margin-top: 10px">
@@ -165,7 +175,7 @@
                         </el-row>
                         <el-row :gutter="20" style="margin-top: 10px">
                             <el-col :span="12">
-                                <el-input v-model="config.password"></el-input>
+                                <el-input v-model="config.password" show-password></el-input>
                             </el-col>
                             <el-col :span="12">
                                 <el-button @click="save(config)">修改</el-button>
@@ -376,7 +386,7 @@
                                 label="dns服务器ip"
                         >
                             <template slot-scope="scope">{{ scope.row['data'] }} <span
-                                    v-show="dnsTestList.length > scope.$index">{{dnsTestList[scope.$index]}}</span>
+                                    v-if="dnsTestList.length > scope.$index && dnsTestList.indexOf(scope.row['data']) !== -1">{{dnsTestList[dnsTestList.indexOf(scope.row['data'])]}}</span>
                             </template>
                         </el-table-column>
                         <el-table-column
@@ -1433,7 +1443,6 @@
                             let dns = this.config.dnsservers[i]['data']
                             if (dns === this.dnsServersDialog.origin.data) {
                                 this.config.dnsservers[i]['data'] = ip
-                                this.$message.success('修改成功')
                                 this.dnsServersDialog.show = false
                                 break
                             }
@@ -1441,6 +1450,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'dnsservers': this.config.dnsservers
@@ -1474,7 +1484,6 @@
                             let dns = this.config.screen_rule[i]['data']
                             if (dns === this.screenRuleDialog.origin.data) {
                                 this.config.screen_rule[i]['data'] = domain
-                                this.$message.success('修改成功')
                                 this.screenRuleDialog.show = false
                                 break
                             }
@@ -1482,6 +1491,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'screen_rule': this.config.screen_rule
@@ -1515,7 +1525,6 @@
                             let dns = this.config.filter_rule[i]['data']
                             if (dns === this.filterRuleDialog.origin.data) {
                                 this.config.filter_rule[i]['data'] = domain
-                                this.$message.success('修改成功')
                                 this.filterRuleDialog.show = false
                                 break
                             }
@@ -1523,6 +1532,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'filter_rule': this.config.filter_rule
@@ -1556,7 +1566,6 @@
                             let dns = this.config.can_request[i]['data']
                             if (dns === this.canRequestDialog.origin.data) {
                                 this.config.can_request[i]['data'] = ip
-                                this.$message.success('修改成功')
                                 this.canRequestDialog.show = false
                                 break
                             }
@@ -1564,6 +1573,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'can_request': this.config.can_request
@@ -1602,7 +1612,6 @@
                             let dns = this.config.not_allow[i].data
                             if (dns === this.notAllowDialog.origin) {
                                 this.config.not_allow[i].data = domain
-                                this.$message.success('修改成功')
                                 this.notAllowDialog.show = false
                                 break
                             }
@@ -1610,6 +1619,7 @@
                     }
                 } else {
                     this.$message.error('输入的域名有误')
+                    return
                 }
                 this.save({
                     'not_allow': this.config.not_allow
@@ -1644,7 +1654,6 @@
                             let dns = this.config.allow[i].data
                             if (dns === this.allowDialog.origin) {
                                 this.config.allow[i].data = domain
-                                this.$message.success('修改成功')
                                 this.allowDialog.show = false
                                 break
                             }
@@ -1652,6 +1661,7 @@
                     }
                 } else {
                     this.$message.error('输入的域名有误')
+                    return
                 }
                 this.save({
                     'allow': this.config.allow
@@ -1685,7 +1695,6 @@
                             let dns = this.config.not_request[i].data
                             if (dns === this.notRequestDialog.origin) {
                                 this.config.not_request[i].data = domain
-                                this.$message.success('修改成功')
                                 this.notRequestDialog.show = false
                                 break
                             }
@@ -1693,6 +1702,7 @@
                     }
                 } else {
                     this.$message.error('输入的域名有误')
+                    return
                 }
                 this.save({
                     'not_request': this.config.not_request
@@ -1748,17 +1758,18 @@
                                     this.config.return_ip['domain'][i].data = domain
                                     this.config.return_ip['ip'][i].data = ip
                                     this.returnIpDialog.show = false
-                                    this.$message.success('修改成功')
                                     flag = true
                                 }
                             }
                             if (!flag) {
                                 this.$message.error('修改失败')
+                                return
                             }
                         }
                     }
                 } else {
                     this.$message.error('输入的ip或域名有误')
+                    return
                 }
                 this.save({
                     'return_ip': this.config.return_ip
@@ -1853,7 +1864,6 @@
                             let dns = this.config.not_response[i].data
                             if (dns === this.notResponseDialog.origin) {
                                 this.config.not_response[i].data = ip
-                                this.$message.success('修改成功')
                                 this.notResponseDialog.show = false
                                 break
                             }
@@ -1861,6 +1871,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'not_response': this.config.not_response
@@ -1894,7 +1905,6 @@
                             let dns = this.config.request_blacklist[i].data
                             if (dns === this.requestBlacklistDialog.origin) {
                                 this.config.request_blacklist[i].data = domain
-                                this.$message.success('修改成功')
                                 this.requestBlacklistDialog.show = false
                                 break
                             }
@@ -1902,6 +1912,7 @@
                     }
                 } else {
                     this.$message.error('输入的域名有误')
+                    return
                 }
                 this.save({
                     'request_blacklist': this.config.request_blacklist
@@ -1936,7 +1947,6 @@
                             let dns = this.config.response_blacklist[i].data
                             if (dns === this.responseBlacklistDialog.origin) {
                                 this.config.response_blacklist[i].data = ip
-                                this.$message.success('修改成功')
                                 this.responseBlacklistDialog.show = false
                                 break
                             }
@@ -1944,6 +1954,7 @@
                     }
                 } else {
                     this.$message.error('输入的ip有误')
+                    return
                 }
                 this.save({
                     'response_blacklist': this.config.response_blacklist
@@ -1997,17 +2008,18 @@
                                     this.config.immobilization['domain'][i].data = domain
                                     this.config.immobilization['ip'][i].data = ip
                                     this.immobilizationDialog.show = false
-                                    this.$message.success('修改成功')
                                     flag = true
                                 }
                             }
                             if (!flag) {
                                 this.$message.error('修改失败')
+                                return
                             }
                         }
                     }
                 } else {
                     this.$message.error('输入的ip或域名有误')
+                    return
                 }
                 this.save({
                     'immobilization': this.config.immobilization
@@ -2027,6 +2039,8 @@
                 request.post('/update', data, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
                     if (res.data.code === 401) {
                         location.href = `https://${location.hostname}:${location.port}/login.html`
+                    } else {
+                        this.$message.success('保存成功')
                     }
                     localStorage.setItem('token', res.data.token)
                 }).finally(() => {
@@ -2204,6 +2218,9 @@
                     this.dnsTestList = res.data.data
                     console.log(res.data.data)
                 })
+            },
+            logout() {
+                localStorage.removeItem('token')
             }
         },
         mounted() {
