@@ -68,9 +68,9 @@
                                 <template slot-scope="scope">
                                     {{ scope.row }}
                                     <el-button type="primary"
-                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(' ')[4]) === -1 && reg.ipReg.test(scope.row.split(' ')[scope.row.split(' ').length - 1])"
+                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split('✦')[3]) === -1 && reg.ipReg.test(scope.row.split('✦')[scope.row.split('✦').length - 2])"
                                                style="margin-left: 10px" size="mini"
-                                               @click="updateImmobilization(scope.row.split(' ')[scope.row.split(' ').length - 1], scope.row.split(' ')[4], 'add')">
+                                               @click="updateImmobilization(scope.row.split('✦')[scope.row.split('✦').length - 2], scope.row.split('✦')[3], 'add')">
                                         添加到固定ip中
                                     </el-button>
                                 </template>
@@ -385,8 +385,7 @@
                         <el-table-column
                                 label="dns服务器ip"
                         >
-                            <template slot-scope="scope">{{ scope.row['data'] }} <span
-                                    v-if="dnsTestList.length > scope.$index && dnsTestList.indexOf(scope.row['data']) !== -1">{{dnsTestList[dnsTestList.indexOf(scope.row['data'])]}}</span>
+                            <template slot-scope="scope">{{ scope.row['data'] }} <span>{{ filter_dns(scope.row['data']) }}</span>
                             </template>
                         </el-table-column>
                         <el-table-column
@@ -2223,6 +2222,15 @@
             logout() {
                 localStorage.removeItem('token')
                 location.href = `https://${location.hostname}:${location.port}/login.html`
+            },
+            filter_dns(ip){
+                debugger
+                for (let i = 0; i < this.dnsTestList.length; i++) {
+                    if (this.dnsTestList[i].ip === ip) {
+                        return this.dnsTestList[i].result
+                    }
+                }
+                return ''
             }
         },
         mounted() {

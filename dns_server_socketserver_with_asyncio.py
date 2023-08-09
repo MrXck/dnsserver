@@ -842,11 +842,20 @@ def check_dns():
         status = conf.check_dns_server(i)
         end = time.time() - start
         if status == 1:
-            result.append(f'在线/耗时:{round(end * 1000, 3)}ms')
+            result.append({
+                'ip': i,
+                'result': f'在线/耗时:{round(end * 1000, 3)}ms'
+            })
         elif status == 2:
-            result.append('未收到响应')
+            result.append({
+                'ip': i,
+                'result': '未收到响应'
+            })
         else:
-            result.append('报错')
+            result.append({
+                'ip': i,
+                'result': '报错'
+            })
 
     return {'data': result}
 
