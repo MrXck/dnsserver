@@ -702,6 +702,7 @@ def update_re():
         data = request.get_json()
     except:
         return '请正确携带参数'
+    print(data)
     for k, v in data.items():
         conf.config[k] = v
 

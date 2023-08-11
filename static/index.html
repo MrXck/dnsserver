@@ -152,7 +152,7 @@
                                 <el-input v-model="config.admin_ip"></el-input>
                             </el-col>
                             <el-col :span="12">
-                                <el-button v-show="reg.ipReg.test(config.admin_ip)" @click="save(config)">修改</el-button>
+                                <el-button v-show="reg.ipReg.test(config.admin_ip)" @click="save({admin_ip: config.admin_ip})">修改</el-button>
                             </el-col>
                         </el-row>
                     </div>
@@ -165,7 +165,7 @@
                                 <el-input v-model="config.username"></el-input>
                             </el-col>
                             <el-col :span="12">
-                                <el-button @click="save(config)">修改</el-button>
+                                <el-button @click="save({username: config.username})">修改</el-button>
                             </el-col>
                         </el-row>
                     </div>
@@ -178,7 +178,7 @@
                                 <el-input v-model="config.password" show-password></el-input>
                             </el-col>
                             <el-col :span="12">
-                                <el-button @click="save(config)">修改</el-button>
+                                <el-button @click="save({password: config.password})">修改</el-button>
                             </el-col>
                         </el-row>
                     </div>
