@@ -10,6 +10,7 @@ import socketserver
 import subprocess
 import time
 import copy
+from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
@@ -448,8 +449,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
 
         # 查看域名是否在缓存里
         if domain in conf.cache and not conf.use_cache_bak:
-            return conf.get_cache_ip(domain, address, conf.cache_bak)
-        elif domain in conf.cache and conf.use_cache_bak:
+            return conf.get_cache_ip(domain, address, conf.cache)
+        elif domain in conf.cache_bak and conf.use_cache_bak:
             return conf.get_cache_ip(domain, address, conf.cache_bak)
 
         try:
@@ -884,6 +885,7 @@ async def dns_server(loop):
 
 def get_new_cache():
     now = datetime.datetime.now()
+    conf.cache_bak = copy.deepcopy(conf.cache)
     conf.use_cache_bak = True
     for domain, ip_dict in conf.cache.items():
         try:
@@ -910,6 +912,13 @@ def schedule_task():
             time.sleep(1)
 
 
+def first_package():
+    time.sleep(1)
+    conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    conn.settimeout(0.1)
+    conn.sendto(b'package', ('127.0.0.1', 53))
+
+
 if __name__ == '__main__':
     log_queue = queue.Queue()
     conf = Config()
@@ -918,5 +927,6 @@ if __name__ == '__main__':
     pool.submit(run)
     schedule_pool = ThreadPoolExecutor(1)
     schedule_pool.submit(schedule_task)
+    Thread(target=first_package).start()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(dns_server(loop))
