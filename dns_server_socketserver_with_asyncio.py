@@ -215,6 +215,11 @@ class Config:
     admin_ip = '127.0.0.1'
     use_cache_bak = False
     symbol = '✦'
+    need_clean_cache_key_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'return_ip', 'not_response', 'can_request', 'request_blacklist', 'screen_rule', 'filter_rule', 'immobilization', 'dnsservers']
+    need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist', 'filter_rule']
+    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
+    need_handle_ip_list = ['return_ip', 'immobilization']
+    need_generate_ip_range_list = ['not_response', 'can_request']
 
     def __init__(self):
         self.cache = self.select_all()
@@ -252,6 +257,9 @@ class Config:
         self.admin_ip = config['admin_ip']
         self.lately_login_time = datetime.datetime.now()
         self.wait_second = 1
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
     @staticmethod
     def _insert(self, domain, ip):
@@ -696,91 +704,39 @@ def update_re():
         return '请正确携带参数'
     for k, v in data.items():
         conf.config[k] = v
-        if k == 'not_allow':
+
+        if k == 'screen_rule':
+            conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
+
+        elif k == 'dnsservers':
+            conf.dns_resolver.nameservers = conf.get_enable_list(v)
+            conf.dns_servers = conf.get_enable_list(v)
+
+        elif k in conf.need_clean_cache_key_list:
             conf.cache = {}
             conf.write_file(conf)
-            conf.not_allow = conf.get_enable_and_re_compile_list(v)
-        elif k == 'allow':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.allow = conf.get_enable_and_re_compile_list(v)
-        elif k == 'not_request':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.not_request = conf.get_enable_and_re_compile_list(v)
-        elif k == 'response_blacklist':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.response_blacklist = conf.get_enable_and_re_compile_list(v)
-        elif k == 'return_ip':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.return_ip = Config.handle_ip(v)
-        elif k == 'refresh_cache_time':
+
+        elif k in conf.need_enable_and_re_compile_list:
+            conf[k] = conf.get_enable_and_re_compile_list(v)
+
+        elif k in conf.need_to_int_list:
+            conf.config[k] = int(v)
+            conf[k] = int(v)
+
+        elif k in conf.need_handle_ip_list:
+            conf[k] = Config.handle_ip(v)
+
+        elif k in conf.need_generate_ip_range_list:
+            conf[k] = conf.generate_ip_range(v)
+
+        else:
+            conf.config[k] = v
+            conf[k] = v
+
+        if k == 'refresh_cache_time':
             conf.is_fresh = True
             schedule.clear()
             schedule_pool.submit(schedule_task)
-            conf.config['refresh_cache_time'] = int(v)
-            conf.refresh_cache_time = int(v)
-        elif k == 'not_response':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.not_response = conf.generate_ip_range(v)
-        elif k == 'can_request':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.can_request = conf.generate_ip_range(v)
-        elif k == 'request_blacklist':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.request_blacklist = conf.get_enable_and_re_compile_list(v)
-        elif k == 'screen_rule':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
-        elif k == 'filter_rule':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.filter_rule = conf.get_enable_and_re_compile_list(v)
-        elif k == 'refresh_time':
-            conf.config['refresh_time'] = int(v)
-            conf.refresh_time = int(v)
-        elif k == 'is_screen':
-            conf.is_screen = v
-        elif k == 'is_filter':
-            conf.is_filter = v
-        elif k == 'is_deduplicate':
-            conf.is_deduplicate = v
-        elif k == 'immobilization':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.immobilization = Config.handle_ip(v)
-        elif k == 'dnsservers':
-            conf.cache = {}
-            conf.write_file(conf)
-            conf.dns_resolver.nameservers = conf.get_enable_list(v)
-            conf.dns_servers = conf.get_enable_list(v)
-        elif k == 'port':
-            conf.config['port'] = int(v)
-            conf.port = int(v)
-        elif k == 'web_port':
-            conf.config['web_port'] = int(v)
-            conf.web_port = int(v)
-        elif k == 'log_num':
-            conf.config['log_num'] = int(v)
-            conf.log_num = int(v)
-        elif k == 'username':
-            conf.config['username'] = v
-            conf.username = v
-        elif k == 'password':
-            conf.config['password'] = v
-            conf.password = v
-        elif k == 'login_wait_second':
-            conf.config['login_wait_second'] = int(v)
-            conf.login_wait_second = int(v)
-        elif k == 'admin_ip':
-            conf.config['admin_ip'] = v
-            conf.admin_ip = v
     write_yaml(conf)
     return {'data': 'ok'}
 
