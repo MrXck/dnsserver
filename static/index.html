@@ -152,7 +152,9 @@
                                 <el-input v-model="config.admin_ip"></el-input>
                             </el-col>
                             <el-col :span="12">
-                                <el-button v-show="reg.ipReg.test(config.admin_ip)" @click="save({admin_ip: config.admin_ip})">修改</el-button>
+                                <el-button v-show="reg.ipReg.test(config.admin_ip)"
+                                           @click="save({admin_ip: config.admin_ip})">修改
+                                </el-button>
                             </el-col>
                         </el-row>
                     </div>
@@ -547,14 +549,19 @@
                         </el-col>
                     </el-row>
                     <el-row :gutter="24" style="margin-bottom: 10px">
-                        <el-col :span="12">
+                        <el-col :span="6">
                             <el-button @click="getIp('immobilization', immobilization.domain)">
                                 获取ip
                             </el-button>
                         </el-col>
-                        <el-col :span="12">
+                        <el-col :span="6">
                             <el-button @click="updateImmobilization(immobilization.ip, immobilization.domain, 'add')">
                                 增加
+                            </el-button>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateDomainImmobilization('all', 'all')">
+                                更新全部域名
                             </el-button>
                         </el-col>
                     </el-row>
@@ -574,7 +581,11 @@
                         <el-table-column
                                 label="域名"
                         >
-                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                            <template slot-scope="scope">{{ scope.row['data'] }}
+                                <el-button @click="updateDomainImmobilization(scope.row['data'], scope.$index)" size="mini">
+                                    更新
+                                </el-button>
+                            </template>
                         </el-table-column>
                         <el-table-column
                                 label="ip"
@@ -2221,14 +2232,50 @@
                 localStorage.removeItem('token')
                 location.href = `https://${location.hostname}:${location.port}/login.html`
             },
-            filter_dns(ip){
-                debugger
+            filter_dns(ip) {
                 for (let i = 0; i < this.dnsTestList.length; i++) {
                     if (this.dnsTestList[i].ip === ip) {
                         return this.dnsTestList[i].result
                     }
                 }
                 return ''
+            },
+            async updateDomainImmobilization(domain, index) {
+                // todo 修改
+                await this.updateImmobilizationIp(domain, index)
+                this.save({'immobilization': this.config.immobilization})
+            },
+            async updateImmobilizationIp(domain, index) {
+                if (domain === 'all') {
+                    for (let i = 0; i < this.config.immobilization['domain'].length; i++) {
+                        let data = this.config.immobilization['domain'][i]
+                        await request.post('/get_ip', {domain: data.data}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                            if (res.data.code === 401) {
+                                location.href = `https://${location.hostname}:${location.port}/login.html`
+                            }
+                            if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
+                                this.config.immobilization['ip'][i].data = res.data.ip
+                            } else {
+                                this.$message.error('解析失败')
+                                return
+                            }
+                            localStorage.setItem('token', res.data.token)
+                        })
+                    }
+                } else {
+                    await request.post('/get_ip', {domain}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
+                        if (res.data.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
+                            this.config.immobilization['ip'][index].data = res.data.ip
+                        } else {
+                            this.$message.error('解析失败')
+                            return
+                        }
+                        localStorage.setItem('token', res.data.token)
+                    })
+                }
             }
         },
         mounted() {
