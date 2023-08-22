@@ -32,12 +32,7 @@
   "ip": []
  },
  "filter_rule": [],
- "screen_rule": [
-  {
-   "data": "www.baidu.com",
-   "enable": true
-  }
- ],
+ "screen_rule": [],
  "is_screen": false,
  "is_filter": false,
  "port": 53,

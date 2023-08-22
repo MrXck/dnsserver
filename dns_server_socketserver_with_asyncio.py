@@ -679,9 +679,9 @@ def set_dns():
     if dns_ip:
         try:
             conf.set_dns(dns_ip)
-            return jsonify(result)
+            return result
         except:
-            return jsonify({'code': 2})
+            return {'code': 2}
     return {'code': 1}
 
 

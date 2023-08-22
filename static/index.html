@@ -5,6 +5,7 @@
     <title>DNS服务器配置页</title>
     <script src="js/vue.js"></script>
     <script src="js/axios-0.18.0.js"></script>
+    <script src="js/jQuery.js"></script>
     <script src="element-ui/lib/index.js"></script>
     <script src="js/Sortable.min.js"></script>
     <link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
@@ -1408,30 +1409,44 @@
                 domain: ['immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
                 domainDescribe: ['域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
             },
-            dnsTestList: []
+            dnsTestList: [],
+            ajaxList: []
         },
         methods: {
             init() {
-                request.get('/all', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                    if (res.data.code === 401) {
-                        location.href = `https://${location.hostname}:${location.port}/login.html`
+
+                $.ajax({
+                    url: '/all',
+                    type: 'get',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.config = res.data
+                        localStorage.setItem('token', res.token)
+                    },
+                    complete: () => {
+                        this.loading.close()
                     }
-                    this.config = res.data.data
-                    localStorage.setItem('token', res.data.token)
-                }).finally(() => {
-                    this.loading.close()
-                    // this.drop()
                 })
 
-                request.get('/get_self_ip', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                    if (res.data.code === 401) {
-                        location.href = `https://${location.hostname}:${location.port}/login.html`
-                    }
-                    try {
-                        this.dns_ip = res.data.ip[0]
-                        localStorage.setItem('token', res.data.token)
-                    } catch (e) {
-                        this.dns_ip = ''
+                $.ajax({
+                    url: '/get_self_ip',
+                    type: 'get',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.dns_ip = res.ip[0]
+                        localStorage.setItem('token', res.token)
                     }
                 })
             },
@@ -1808,18 +1823,27 @@
             },
             updateSelfDns() {
                 if (this.reg.ipReg.test(this.dns_ip)) {
-                    request.post('/set_dns', {dns: this.dns_ip}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                        if (res.data.code === 401) {
-                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                    $.ajax({
+                        url: '/set_dns',
+                        type: 'post',
+                        contentType: 'application/json',
+                        headers: {
+                            Authorization: localStorage.getItem('token'),
+                        },
+                        data: JSON.stringify({dns: this.dns_ip}),
+                        success: (res) => {
+                            if (res.code === 401) {
+                                location.href = `https://${location.hostname}:${location.port}/login.html`
+                            }
+                            if (res.code === 0) {
+                                this.$message.success(`设置成功`)
+                            } else if (res.code === 2) {
+                                this.$message.error('设置失败 请使用管理员权限运行程序')
+                            } else {
+                                this.$message.error('设置失败')
+                            }
+                            localStorage.setItem('token', res.token)
                         }
-                        if (res.data.code === 0) {
-                            this.$message.success(`设置成功`)
-                        } else if (res.data.code === 2) {
-                            this.$message.error('设置失败 请使用管理员权限运行程序')
-                        } else {
-                            this.$message.error('设置失败')
-                        }
-                        localStorage.setItem('token', res.data.token)
                     })
                 } else {
                     this.$message.error('请输入正确的ip')
@@ -2048,25 +2072,44 @@
                 }
             },
             save(data) {
-                request.post('/update', data, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                    if (res.data.code === 401) {
-                        location.href = `https://${location.hostname}:${location.port}/login.html`
-                    } else {
-                        this.$message.success('保存成功')
+                $.ajax({
+                    url: '/update',
+                    type: 'post',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    data: JSON.stringify(data),
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        } else {
+                            this.$message.success('保存成功')
+                        }
+                        localStorage.setItem('token', res.token)
+                    },
+                    complete: () => {
+                        this.init()
                     }
-                    localStorage.setItem('token', res.data.token)
-                }).finally(() => {
-                    this.init()
                 })
             },
             log() {
-                request.get('/log', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                    if (res.data.code === 401) {
-                        location.href = `https://${location.hostname}:${location.port}/login.html`
+                $.ajax({
+                    url: '/log',
+                    type: 'get',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.logList = res.data
+                        localStorage.setItem('token', res.token)
                     }
-                    this.logList = res.data.data
-                    localStorage.setItem('token', res.data.token)
                 })
+
             },
             logRefresh() {
                 clearInterval(this.timer)
@@ -2188,16 +2231,25 @@
             },
             getIp(type, domain) {
                 if (this.reg.domainReg1.test(domain)) {
-                    request.post('/get_ip', {domain}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                        if (res.data.code === 401) {
-                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                    $.ajax({
+                        url: '/get_ip',
+                        type: 'post',
+                        contentType: 'application/json',
+                        headers: {
+                            Authorization: localStorage.getItem('token'),
+                        },
+                        data: JSON.stringify({domain}),
+                        success: (res) => {
+                            if (res.code === 401) {
+                                location.href = `https://${location.hostname}:${location.port}/login.html`
+                            }
+                            if (res.ip !== '' && res.ip !== undefined && res.ip !== null) {
+                                this[type]['ip'] = res.ip
+                            } else {
+                                this.$message.error('解析失败')
+                            }
+                            localStorage.setItem('token', res.token)
                         }
-                        if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
-                            this[type]['ip'] = res.data.ip
-                        } else {
-                            this.$message.error('解析失败')
-                        }
-                        localStorage.setItem('token', res.data.token)
                     })
                 } else {
                     this.$message.error('请输入正确的域名')
@@ -2222,12 +2274,20 @@
                 }
             },
             checkDns() {
-                request.get('/check_dns', {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                    if (res.data.code === 401) {
-                        location.href = `https://${location.hostname}:${location.port}/login.html`
+                $.ajax({
+                    url: '/check_dns',
+                    type: 'get',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.dnsTestList = res.data
+                        localStorage.setItem('token', res.token)
                     }
-                    localStorage.setItem('token', res.data.token)
-                    this.dnsTestList = res.data.data
                 })
             },
             logout() {
@@ -2242,40 +2302,62 @@
                 }
                 return ''
             },
-            async updateDomainImmobilization(domain, index) {
-                await this.updateImmobilizationIp(domain, index)
-                this.save({'immobilization': this.config.immobilization})
+            updateDomainImmobilization(domain, index) {
+                this.updateImmobilizationIp(domain, index)
+                let allAjax = $.when.apply($, this.ajaxList)
+                allAjax.done(() => {
+                    this.save({'immobilization': this.config.immobilization})
+                    this.ajaxList = []
+                })
             },
-            async updateImmobilizationIp(domain, index) {
+            updateImmobilizationIp(domain, index) {
                 if (domain === 'all') {
                     for (let i = 0; i < this.config.immobilization['domain'].length; i++) {
                         let data = this.config.immobilization['domain'][i]
-                        await request.post('/get_ip', {domain: data.data}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                            if (res.data.code === 401) {
+                        this.ajaxList.push($.ajax({
+                            url: '/get_ip',
+                            type: 'post',
+                            contentType: 'application/json',
+                            data: JSON.stringify({domain: data.data}),
+                            headers: {
+                                Authorization: localStorage.getItem('token'),
+                            },
+                            success: (res) => {
+                                if (res.code === 401) {
+                                    location.href = `https://${location.hostname}:${location.port}/login.html`
+                                }
+                                if (res.ip !== '' && res.ip !== undefined && res.ip !== null) {
+                                    this.config.immobilization['ip'][i].data = res.ip
+                                } else {
+                                    this.$message.error('解析失败')
+                                    return
+                                }
+                                localStorage.setItem('token', res.token)
+                            }
+                        }))
+                    }
+                } else {
+                    this.ajaxList.push($.ajax({
+                        url: '/get_ip',
+                        type: 'post',
+                        contentType: 'application/json',
+                        data: JSON.stringify({domain}),
+                        headers: {
+                            Authorization: localStorage.getItem('token'),
+                        },
+                        success: (res) => {
+                            if (res.code === 401) {
                                 location.href = `https://${location.hostname}:${location.port}/login.html`
                             }
-                            if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
-                                this.config.immobilization['ip'][i].data = res.data.ip
+                            if (res.ip !== '' && res.ip !== undefined && res.ip !== null) {
+                                this.config.immobilization['ip'][index].data = res.ip
                             } else {
                                 this.$message.error('解析失败')
                                 return
                             }
-                            localStorage.setItem('token', res.data.token)
-                        })
-                    }
-                } else {
-                    await request.post('/get_ip', {domain}, {headers: {Authorization: localStorage.getItem('token')}}).then(res => {
-                        if (res.data.code === 401) {
-                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                            localStorage.setItem('token', res.token)
                         }
-                        if (res.data.ip !== '' && res.data.ip !== undefined && res.data.ip !== null) {
-                            this.config.immobilization['ip'][index].data = res.data.ip
-                        } else {
-                            this.$message.error('解析失败')
-                            return
-                        }
-                        localStorage.setItem('token', res.data.token)
-                    })
+                    }))
                 }
             }
         },
