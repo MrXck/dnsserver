@@ -484,12 +484,13 @@ class DNSServer(socketserver.DatagramRequestHandler):
                                 conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                                 return None
 
-                        # 插入数据库
                         logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
                         conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip{conf.symbol}{ip}{conf.symbol}')
                         conf.insert(domain, ip)
                         return ip
                     except:
+                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip None')
+                        conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip{conf.symbol}None{conf.symbol}')
                         return None
 
             # 不向上请求的域名

@@ -582,7 +582,8 @@
                                 label="域名"
                         >
                             <template slot-scope="scope">{{ scope.row['data'] }}
-                                <el-button @click="updateDomainImmobilization(scope.row['data'], scope.$index)" size="mini">
+                                <el-button @click="updateDomainImmobilization(scope.row['data'], scope.$index)"
+                                           size="mini">
                                     更新
                                 </el-button>
                             </template>
@@ -2242,7 +2243,6 @@
                 return ''
             },
             async updateDomainImmobilization(domain, index) {
-                // todo 修改
                 await this.updateImmobilizationIp(domain, index)
                 this.save({'immobilization': this.config.immobilization})
             },
