@@ -68,9 +68,9 @@
                                 <template slot-scope="scope">
                                     {{ scope.row }}
                                     <el-button type="primary"
-                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split('✦')[3]) === -1 && reg.ipReg.test(scope.row.split('✦')[scope.row.split('✦').length - 2])"
+                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(split_str)[3]) === -1 && reg.ipReg.test(scope.row.split(split_str)[scope.row.split(split_str).length - 2])"
                                                style="margin-left: 10px" size="mini"
-                                               @click="updateImmobilization(scope.row.split('✦')[scope.row.split('✦').length - 2], scope.row.split('✦')[3], 'add')">
+                                               @click="updateImmobilization(scope.row.split(split_str)[scope.row.split(split_str).length - 2], scope.row.split(split_str)[3], 'add')">
                                         添加到固定ip中
                                     </el-button>
                                 </template>
@@ -1293,6 +1293,7 @@
             request_blacklist: '',
             response_blacklist: '',
             dns_ip: '',
+            split_str: '✦',
             self_ip_list: [],
             updateSequenceDialog: {
                 show: false,
@@ -2308,8 +2309,13 @@
                 }
                 if (this.config.is_deduplicate) {
                     list = list.filter((data, index, arr) => {
-                        const split = data.split(' ')
-                        let string = split[2] + split[4]
+                        const split = data.split(this.split_str)
+                        let string
+                        if (this.split_str === ' ') {
+                            string = split[2] + split[4]
+                        } else {
+                            string = split[1] + split[3]
+                        }
                         if (result.indexOf(string) === -1) {
                             result.push(string)
                             return true
@@ -2318,12 +2324,19 @@
                 }
                 if (this.config.is_filter) {
                     list = list.filter((data, index, arr) => {
-                        const split = data.split(' ')
+                        const split = data.split(this.split_str)
+                        let string
+                        if (this.split_str === ' ') {
+                            string = split[4]
+                        } else {
+                            string = split[3]
+                        }
+
                         for (let i = 0; i < this.config.filter_rule.length; i++) {
                             const item = this.config.filter_rule[i]
                             if (item.enable) {
                                 let str = `^${item.data}$`
-                                if (split[4].match(str)) {
+                                if (string.match(str)) {
                                     return false
                                 }
                             }
