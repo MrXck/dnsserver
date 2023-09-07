@@ -22,7 +22,6 @@ import schedule
 from dns.resolver import Resolver
 from dnslib import DNSRecord, QTYPE, DNSHeader, RR, A
 from flask import Flask, request, jsonify, redirect
-from flask_cors import CORS
 
 JWT_SALT = 'fgdkljdlkfa#^&%^@$^!*^*($&@fdiskhgjfkdhfidofds*&^%&$%&'
 
@@ -58,7 +57,6 @@ def parse_payload(token):
 
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-CORS(app)
 log_dir = "log"  # 日志存放文件夹名称
 log_path = os.getcwd() + os.sep + log_dir
 
