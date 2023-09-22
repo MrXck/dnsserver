@@ -135,7 +135,7 @@ class TimeLoggerRolloverHandler(TimedRotatingFileHandler):
         self.rolloverAt = newRolloverAt
 
 
-def get_myProjectLogger(project_name, log_file_name, when='H', interval=1):
+def get_myProjectLogger(project_name, log_file_name, elk, when='H', interval=1):
     base_dir = f"./log_{project_name}"
     datetime_now = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S').split('_')
     date_now = datetime_now[0]
@@ -161,10 +161,34 @@ def get_myProjectLogger(project_name, log_file_name, when='H', interval=1):
     logger = logging.getLogger(__name__)
     logger.setLevel(level=level)  # 设置日志基础级别
 
+    if elk['enable']:
+        sh = MySocketHandler(elk['host'], elk['port'])
+        sh.encoding = 'utf-8'
+        sh.setFormatter(formatter)
+        logger.addHandler(sh)
+
     logger.addHandler(info_handel)
     logger.addHandler(error_handler)
     # LOG
     return logger
+
+
+class MySocketHandler(logging.handlers.SocketHandler):
+    def makePickle(self, record):
+        # 将日志消息格式化为字符串
+        msg = self.format(record)
+
+        # 将日志中的所有换行符去除
+        msg = msg.replace('\n', ' ')
+
+        # 给每条日志加上分隔符 方便logstash解析
+        msg += '\n'
+
+        # 将字符串转换为字节流
+        msg = msg.encode('utf-8')
+
+        # 返回字节流
+        return msg
 
 
 class DateEncoder(json.JSONEncoder):
@@ -225,6 +249,7 @@ class Config:
         with open('config.json', encoding='utf-8', mode='r') as f:
             config = json.loads(f.read())
             self.config = config
+        self.elk = config['elk']
         self.not_allow = self.get_enable_and_re_compile_list(config['not_allow'])
         self.allow = self.get_enable_and_re_compile_list(config['allow'])
         self.not_request = self.get_enable_and_re_compile_list(config['not_request'])
@@ -875,7 +900,7 @@ def first_package():
 if __name__ == '__main__':
     log_queue = queue.Queue()
     conf = Config()
-    logger = get_myProjectLogger("dns", "log_filename", when='H', interval=1)
+    logger = get_myProjectLogger("dns", "log_filename", elk=conf.elk, when='H', interval=1)
     pool = ThreadPoolExecutor(1)
     pool.submit(run)
     schedule_pool = ThreadPoolExecutor(1)
