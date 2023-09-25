@@ -26,12 +26,201 @@
 </style>
 <body>
 <div id="app">
-    <div v-if="loading !== null" style="padding: 10px">
+    <div v-if="!isLoading" style="padding: 10px">
         <el-row :gutter="24">
-            <el-col :span="12">
+            <el-col :span="4">
+                <el-card style="display: flex;flex-direction: column;justify-content: space-between">
+                    <div>
+                        <el-row>
+                            退出登录
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-button @click="logout">登出</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            配置的缓存刷新时间(单位: 秒)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.refresh_time"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="updateRefreshTime">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.refresh_time"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'refresh_time': config.can.refresh_time})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            设置管理员ip
+                        </el-row>
+                        <el-row :gutter="24" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.admin_ip"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button v-show="reg.ipReg.test(config.admin_ip)"
+                                           @click="save({admin_ip: config.admin_ip})">修改
+                                </el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.admin_ip"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'admin_ip': config.can.admin_ip})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-card>
+            </el-col>
+            <el-col :span="5">
+                <el-card style="display: flex;flex-direction: column;justify-content: space-between">
+                    <div>
+                        <el-row>
+                            服务使用的端口(重启服务后生效)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.port"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="updatePort">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.port"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'port': config.can.port})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            web服务使用的端口(重启服务后生效)
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.web_port"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="updateWebPort">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.web_port"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'web_port': config.can.web_port})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            配置页用户名
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.username"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="save({username: config.username})">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.username"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'username': config.can.username})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-card>
+            </el-col>
+            <el-col :span="5">
+                <el-card style="display: flex;flex-direction: column;justify-content: space-between">
+                    <div>
+                        <el-row>
+                            配置页密码
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.password" show-password></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="save({password: config.password})">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.password"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'password': config.can.password})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            每次错误密码的等待时间系数
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.login_wait_second"></el-input>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-button @click="updateLoginWaitSecond">修改</el-button>
+                            </el-col>
+                            <el-col :span="4" style="margin-left: 10px">
+                                <el-switch
+                                        v-model="config.can.login_wait_second"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949"
+                                        @change="updateCan({'login_wait_second': config.can.login_wait_second})"
+                                >
+                                </el-switch>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-card>
+            </el-col>
+            <el-col :span="5">
                 <el-card style="display: flex;flex-direction: column;justify-content: space-between">
                     <el-row :gutter="20">
-                        elk相关配置
+                        <el-col :span="18">
+                            elk相关配置
+                        </el-col>
+                        <el-col :span="4" style="margin-left: 10px">
+                            <el-switch
+                                    v-model="config.can.elk"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'elk': config.can.elk})"
+                            >
+                            </el-switch>
+                        </el-col>
                     </el-row>
                     <div>
                         <el-row style="margin-top: 10px">
@@ -81,11 +270,20 @@
                     </div>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :span="5">
                 <el-card style="display: flex;flex-direction: column;justify-content: space-between">
                     <el-row :gutter="20">
                         <el-col :span="18">
                             服务端相关配置
+                        </el-col>
+                        <el-col :span="4" style="margin-left: 10px">
+                            <el-switch
+                                    v-model="config.can.server"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'server': config.can.server})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <div>
@@ -154,202 +352,20 @@
             </el-col>
         </el-row>
         <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="18">
-                <el-card>
-                    <el-row>
-                        日志
-                    </el-row>
-                    <el-row :gutter="20" style="margin-top: 10px">
-                        <el-col :span="4">
-                            <span>日志刷新时间(s)</span>
-                            <el-input-number v-model="refreshLogTime" size="mini" @change="logRefresh" :min="1"
-                                             :max="999" label="日志刷新时间"></el-input-number>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="startRefreshLog"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="logRefresh"
-                            >
-                            </el-switch>
-                            <span>日志刷新</span>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-input v-model="config.log_num"/>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-button @click="updateLogNum">修改</el-button>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-button @click="testDialog.show = true" type="primary">打开测试窗口</el-button>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20" style="margin-top: 10px">
-                        <el-table
-                                :data="config.is_deduplicate || config.is_screen || config.is_filter ? filterLogList : logList"
-                                tooltip-effect="dark"
-                                style="width: 100%"
-                                border
-                                :height="710"
-                        >
-                            <el-table-column
-                                    label="日志"
-                            >
-                                <template slot-scope="scope">
-                                    {{ scope.row }}
-                                    <el-button type="primary"
-                                               v-show="config.immobilization['domain'].map(data => data.data).indexOf(scope.row.split(split_str)[3]) === -1 && reg.ipReg.test(scope.row.split(split_str)[scope.row.split(split_str).length - 2])"
-                                               style="margin-left: 10px" size="mini"
-                                               @click="updateImmobilization(scope.row.split(split_str)[scope.row.split(split_str).length - 2], scope.row.split(split_str)[3], 'add')">
-                                        添加到固定ip中
-                                    </el-button>
-                                </template>
-                            </el-table-column>
-                        </el-table>
-                    </el-row>
-                </el-card>
-            </el-col>
-            <el-col :span="6">
-                <el-card style="display: flex;flex-direction: column;justify-content: space-between">
-                    <div>
-                        <el-row>
-                            退出登录
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-button @click="logout">登出</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            配置的缓存刷新时间(单位: 秒)
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.refresh_time"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updateRefreshTime">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            配置的定时任务刷新缓存时间(单位: 秒)
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.refresh_cache_time"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updateRefreshCacheTime">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            服务使用的端口(重启服务后生效)
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.port"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updatePort">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            web服务使用的端口(重启服务后生效)
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.web_port"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updateWebPort">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            设置管理员ip
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.admin_ip"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button v-show="reg.ipReg.test(config.admin_ip)"
-                                           @click="save({admin_ip: config.admin_ip})">修改
-                                </el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            配置页用户名
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.username"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="save({username: config.username})">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            配置页密码
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.password" show-password></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="save({password: config.password})">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            每次错误密码的等待时间系数
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="config.login_wait_second"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updateLoginWaitSecond">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                    <div>
-                        <el-row style="margin-top: 10px">
-                            为本机设置的dns ip
-                        </el-row>
-                        <el-row :gutter="20" style="margin-top: 10px">
-                            <el-col :span="12">
-                                <el-input v-model="dns_ip"></el-input>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-button @click="updateSelfDns">修改</el-button>
-                            </el-col>
-                        </el-row>
-                    </div>
-                </el-card>
-            </el-col>
-        </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>日志筛选</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.screen_rule"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'screen_rule': config.can.screen_rule})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -422,8 +438,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>日志过滤</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.filter_rule"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'filter_rule': config.can.filter_rule})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -486,8 +511,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>dns服务器配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.dnsservers"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'dnsservers': config.can.dnsservers})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -550,8 +584,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>不允许请求该dns服务器的ip配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.not_response"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'not_response': config.can.not_response})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -609,8 +652,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>允许请求该dns服务器的ip配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.can_request"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'can_request': config.can.can_request})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -667,8 +719,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>给域名配置固定ip</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.immobilization"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'immobilization': config.can.immobilization})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -755,8 +816,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>允许访问的域名配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.allow"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'allow': config.can.allow})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -811,8 +881,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>不允许访问的ip配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.response_blacklist"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'response_blacklist': config.can.response_blacklist})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -871,8 +950,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>返回空值的域名配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.not_request"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'not_request': config.can.not_request})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -932,8 +1020,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>不允许请求的域名配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.request_blacklist"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'request_blacklist': config.can.request_blacklist})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -991,8 +1088,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>返回固定ip的域名</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.return_ip"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'return_ip': config.can.return_ip})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1065,8 +1171,17 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col>
+                        <el-col :span="18">
                             <h3>不允许访问的域名</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.not_allow"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'not_allow': config.can.not_allow})"
+                            >
+                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1412,6 +1527,7 @@
                 return_ip: {},
             },
             loading: null,
+            isLoading: true,
             keyword: '',
             dnsservers: '',
             screen_rule: '',
@@ -1543,7 +1659,6 @@
         },
         methods: {
             init() {
-
                 $.ajax({
                     url: '/all',
                     type: 'get',
@@ -1560,22 +1675,7 @@
                     },
                     complete: () => {
                         this.loading.close()
-                    }
-                })
-
-                $.ajax({
-                    url: '/get_self_ip',
-                    type: 'get',
-                    contentType: 'application/json',
-                    headers: {
-                        Authorization: localStorage.getItem('token'),
-                    },
-                    success: (res) => {
-                        if (res.code === 401) {
-                            location.href = `https://${location.hostname}:${location.port}/login.html`
-                        }
-                        this.dns_ip = res.ip[0]
-                        localStorage.setItem('token', res.token)
+                        this.isLoading = false
                     }
                 })
             },
@@ -2488,6 +2588,24 @@
                         }
                     }))
                 }
+            },
+            updateCan(data) {
+                $.ajax({
+                    url: '/update_can',
+                    type: 'post',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.$message.success('操作成功')
+                        localStorage.setItem('token', res.token)
+                    }
+                })
             }
         },
         mounted() {
@@ -2498,7 +2616,7 @@
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             this.init()
-            this.log()
+            // this.log()
         },
         computed: {
             filterLogList() {

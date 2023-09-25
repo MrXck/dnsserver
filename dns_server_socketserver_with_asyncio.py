@@ -18,6 +18,7 @@ from threading import Lock
 
 import jwt
 import psutil
+import requests
 import schedule
 from dns.resolver import Resolver
 from dnslib import DNSRecord, QTYPE, DNSHeader, RR, A
@@ -237,6 +238,10 @@ class Config:
     admin_ip = '127.0.0.1'
     use_cache_bak = False
     symbol = '✦'
+    refresh_job = None
+    get_config_job = None
+    config_job_start = False
+    refresh_job_start = False
     need_clean_cache_key_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'return_ip', 'not_response', 'can_request', 'request_blacklist', 'screen_rule', 'filter_rule', 'immobilization', 'dnsservers']
     need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist', 'filter_rule']
     need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
@@ -250,6 +255,7 @@ class Config:
             config = json.loads(f.read())
             self.config = config
         self.elk = config['elk']
+        self.server = config['server']
         self.not_allow = self.get_enable_and_re_compile_list(config['not_allow'])
         self.allow = self.get_enable_and_re_compile_list(config['allow'])
         self.not_request = self.get_enable_and_re_compile_list(config['not_request'])
@@ -283,6 +289,9 @@ class Config:
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
     @staticmethod
     def _insert(self, domain, ip):
@@ -726,7 +735,18 @@ def update_re():
         data = request.get_json()
     except:
         return '请正确携带参数'
+    update_config(data, conf)
+    write_yaml(conf)
+    return {'data': 'ok'}
 
+
+@app.route('/log')
+@decorator_login
+def get_log():
+    return {'data': list(log_queue.queue)[::-1]}
+
+
+def update_config(data: dict, conf):
     for k, v in data.items():
         conf.config[k] = v
 
@@ -753,23 +773,26 @@ def update_re():
 
         elif k in conf.need_generate_ip_range_list:
             conf[k] = conf.generate_ip_range(v)
-
         else:
             conf.config[k] = v
             conf[k] = v
 
         if k == 'refresh_cache_time':
             conf.is_fresh = True
-            schedule.clear()
+            conf.refresh_job_start = False
+            schedule.cancel_job(conf.refresh_job)
             schedule_pool.submit(schedule_task)
-    write_yaml(conf)
-    return {'data': 'ok'}
-
-
-@app.route('/log')
-@decorator_login
-def get_log():
-    return {'data': list(log_queue.queue)[::-1]}
+        if k == 'server':
+            conf.config_job_start = False
+            schedule.cancel_job(conf.get_config_job)
+            if 'time' in v:
+                conf.config[k]['time'] = int(v['time'])
+                conf[k]['time'] = int(v['time'])
+            if 'port' in v:
+                conf.config[k]['port'] = int(v['port'])
+                conf[k]['port'] = int(v['port'])
+            if v['enable']:
+                schedule_pool.submit(schedule_get_config_task)
 
 
 def check_token():
@@ -878,33 +901,69 @@ def get_new_cache():
 
 def schedule_task():
     get_new_cache()
-    schedule.every(conf.refresh_cache_time).seconds.do(get_new_cache)
+    conf.refresh_job_start = True
+    conf.refresh_job = schedule.every(conf.refresh_cache_time).seconds.do(get_new_cache)
     while True:
         try:
+            if not conf.refresh_job_start:
+                break
             schedule.run_pending()
             time.sleep(1)
             if conf.is_fresh:
                 conf.is_fresh = False
                 break
-        except:
+        except Exception as e:
+            logger.error(f'刷新缓存失败 {e}')
             time.sleep(1)
+
+
+def schedule_get_config_task():
+    conf.get_config_job = schedule.every(conf.server['time']).seconds.do(get_config)
+    conf.config_job_start = True
+    while True:
+        try:
+            if not conf.config_job_start:
+                break
+            schedule.run_pending()
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f'从服务端获取配置失败 {e}')
+            time.sleep(1)
+
+
+def get_config():
+    try:
+        resp = requests.get(f'https://{conf.server["host"]}:{conf.server["port"]}/get_config', verify=False)
+        data = resp.json()
+        update_config(data, conf)
+        write_yaml(conf)
+    except:
+        resp = requests.get(f'http://{conf.server["host"]}:{conf.server["port"]}/get_config')
+        data = resp.json()
+        update_config(data, conf)
+        write_yaml(conf)
 
 
 def first_package():
     time.sleep(1)
     conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     conn.settimeout(0.1)
-    conn.sendto(b'package', ('127.0.0.1', 53))
+    conn.sendto(b'package', ('127.0.0.1', conf.port))
 
 
 if __name__ == '__main__':
+    requests.packages.urllib3.disable_warnings()
     log_queue = queue.Queue()
     conf = Config()
     logger = get_myProjectLogger("dns", "log_filename", elk=conf.elk, when='H', interval=1)
     pool = ThreadPoolExecutor(1)
     pool.submit(run)
-    schedule_pool = ThreadPoolExecutor(1)
-    schedule_pool.submit(schedule_task)
+    schedule_pool = ThreadPoolExecutor(2)
+    if conf.server['enable']:
+        schedule_pool.submit(schedule_task)
+        schedule_pool.submit(schedule_get_config_task)
+    else:
+        schedule_pool.submit(schedule_task)
     Thread(target=first_package).start()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(dns_server(loop))

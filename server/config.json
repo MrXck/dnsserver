@@ -36,7 +36,7 @@
  "is_screen": false,
  "is_filter": false,
  "port": 53,
- "web_port": 5000,
+ "web_port": 5001,
  "log_num": 90,
  "is_deduplicate": false,
  "username": "username",
@@ -49,9 +49,37 @@
   "port": 5001
  },
  "server": {
-  "enable": false,
+  "enable": true,
   "host": "127.0.0.1",
   "port": 5001,
   "time": 10
+ },
+ "can": {
+  "not_allow": true,
+  "allow": true,
+  "not_request": true,
+  "return_ip": true,
+  "refresh_cache_time": false,
+  "not_response": true,
+  "can_request": true,
+  "request_blacklist": true,
+  "response_blacklist": true,
+  "dnsservers": true,
+  "refresh_time": true,
+  "immobilization": true,
+  "filter_rule": true,
+  "screen_rule": true,
+  "is_screen": false,
+  "is_filter": false,
+  "port": true,
+  "web_port": false,
+  "log_num": false,
+  "is_deduplicate": false,
+  "username": true,
+  "password": true,
+  "login_wait_second": true,
+  "admin_ip": true,
+  "elk": true,
+  "server": true
  }
 }

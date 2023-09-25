@@ -18,7 +18,8 @@
    2. 支持日志按年、月、日、时、分、秒保存
    3. 支持对接远程 elk 需要在 config.json 中的 elk 配置 enable 修改为true开启 配置 host 和 port 然后重启 dns
 10. 支持对配置的dns服务器进行测试
+11. 支持服务端管理配置 可在 config.json 中配置服务端ip和端口以及是否开启 开启后可定时向服务端拉取配置
 
-需要向项目目录下放置 server.crt 和 server.key 证书 或者 在代码的 874 行去掉 ssl_context=('server.crt', 'server.key')
+需要向项目目录下放置 server.crt 和 server.key 证书 或者 在代码中去掉 ssl_context=('server.crt', 'server.key')
 由于技术有限无法做出客户端所以使用 vue + elementUI 网页来作为配置
 运行后浏览器打开 https://127.0.0.1:5000 就可以配置了
