@@ -1235,6 +1235,76 @@
                 </el-card>
             </el-col>
         </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="18">
+                            <h3>危险域名配置</h3>
+                        </el-col>
+                        <el-col :span="4">
+                            <el-switch
+                                    v-model="config.can.dangerous_domain"
+                                    active-color="#13ce66"
+                                    inactive-color="#ff4949"
+                                    @change="updateCan({'dangerous_domain': config.can.dangerous_domain})"
+                            >
+                            </el-switch>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="dangerous_domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateDangerousDomain(dangerous_domain, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.dangerous_domain"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="在黑名单里的请求域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(requestBlacklistDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteDangerousDomain(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.dangerous_domain, 'dangerous_domain')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
     </div>
     <el-dialog title="编辑日志筛选域名"
                :visible.sync="screenRuleDialog.show">
@@ -1413,6 +1483,22 @@
             </el-button>
         </div>
     </el-dialog>
+    <el-dialog title="编辑危险域名"
+               :visible.sync="dangerousDomainDialog.show">
+        <el-row style="margin-bottom: 10px">
+            危险域名
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="dangerousDomainDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dangerousDomainDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateDangerousDomain(dangerousDomainDialog.now, 'edit')">确 定
+            </el-button>
+        </div>
+    </el-dialog>
     <el-dialog title="编辑缓存域名"
                :visible.sync="immobilizationDialog.show">
         <el-row style="margin-bottom: 10px">
@@ -1539,6 +1625,7 @@
             not_response: '',
             request_blacklist: '',
             response_blacklist: '',
+            dangerous_domain: '',
             dns_ip: '',
             split_str: '✦',
             self_ip_list: [],
@@ -1619,6 +1706,11 @@
                 show: false
             },
             responseBlacklistDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            dangerousDomainDialog: {
                 origin: '',
                 now: '',
                 show: false
@@ -2299,6 +2391,47 @@
                         'immobilization': this.config.immobilization
                     })
                 }
+            },
+            updateDangerousDomain(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.dangerous_domain.length; i++) {
+                            const data = this.config.dangerous_domain[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.dangerous_domain.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.dangerous_domain.length; i++) {
+                            let dns = this.config.dangerous_domain[i].data
+                            if (dns === this.requestBlacklistDialog.origin) {
+                                this.config.dangerous_domain[i].data = domain
+                                this.requestBlacklistDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                    return
+                }
+                this.save({
+                    'dangerous_domain': this.config.dangerous_domain
+                })
+            },
+            deleteDangerousDomain(ip) {
+                this.config.dangerous_domain = this.config.dangerous_domain.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'dangerous_domain': this.config.dangerous_domain
+                })
             },
             save(data) {
                 $.ajax({

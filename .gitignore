@@ -1,5 +1,6 @@
 HELP.md
 .idea
 log_dns
+log_dangerous_domain
 server.crt
 server.key

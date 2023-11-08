@@ -53,5 +53,6 @@
   "host": "127.0.0.1",
   "port": 5001,
   "time": 10
- }
+ },
+ "dangerous_domain": []
 }

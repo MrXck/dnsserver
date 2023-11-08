@@ -1,6 +1,8 @@
 import datetime
 import json
 import logging
+import os
+import sys
 from functools import wraps
 from threading import Lock
 
@@ -25,7 +27,7 @@ class Config:
     need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
 
     def __init__(self):
-        with open('config.json', encoding='utf-8', mode='r') as f:
+        with open(os.path.join(base_dir, 'config.json'), encoding='utf-8', mode='r') as f:
             config = json.loads(f.read())
             self.config = config
         self.login_wait_second = config['login_wait_second']
@@ -82,7 +84,7 @@ app = Flask(__name__, static_folder='static', static_url_path='')
 
 def write_yaml(conf):
     data = conf.config
-    with open('config.json', encoding="utf-8", mode="w") as f:
+    with open(os.path.join(base_dir, 'config.json'), encoding="utf-8", mode="w") as f:
         f.write(json.dumps(data, cls=DateEncoder, indent=1, ensure_ascii=False))
 
 
@@ -182,7 +184,7 @@ def update_can():
 @app.route('/all')
 @decorator_login
 def all_data():
-    f = open('config.json', encoding='utf-8', mode='r')
+    f = open(os.path.join(base_dir, 'config.json'), encoding='utf-8', mode='r')
     data = json.loads(f.read())
     f.close()
     return {'data': data}
@@ -210,6 +212,7 @@ def get_config():
 
 
 if __name__ == '__main__':
+    base_dir = os.path.dirname(sys.argv[0])
     conf = Config()
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
