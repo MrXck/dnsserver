@@ -54,5 +54,6 @@
   "port": 5001,
   "time": 10
  },
- "dangerous_domain": []
+ "dangerous_domain": [],
+ "white_domain": []
 }

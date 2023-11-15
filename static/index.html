@@ -206,6 +206,8 @@
                                                @click="updateImmobilization(scope.row.split(split_str)[scope.row.split(split_str).length - 2], scope.row.split(split_str)[3], 'add')">
                                         添加到固定ip中
                                     </el-button>
+                                    <el-button type="primary" style="margin-left: 10px" size="mini" v-show="!checkDomain(scope.row.split(split_str)[3])" @click="updateDangerousDomain(scope.row.split(split_str)[3], 'add')">添加到危险域名中</el-button>
+                                    <el-button type="primary" style="margin-left: 10px" size="mini" v-show="!checkDomain(scope.row.split(split_str)[3])" @click="updateWhiteDomain(scope.row.split(split_str)[3], 'add')">添加到域名白名单中</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -1219,6 +1221,61 @@
                     </el-table>
                 </el-card>
             </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="20">
+                            <h3>域名白名单配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="white_domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateWhiteDomain(white_domain, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.white_domain"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="白名单"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(whiteDomainDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteWhiteDomain(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('white_domain', config.white_domain[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('white_domain', config.white_domain[scope.$index], false)">
+                                    停用
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
         </el-row>
     </div>
     <el-dialog title="编辑日志筛选域名"
@@ -1497,6 +1554,22 @@
             <el-button @click="dangerousListDialog.show = false">取 消</el-button>
         </div>
     </el-dialog>
+    <el-dialog title="编辑域名白名单"
+               :visible.sync="whiteDomainDialog.show">
+        <el-row style="margin-bottom: 10px">
+            域名白名单
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="whiteDomainDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="whiteDomainDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateWhiteDomain(whiteDomainDialog.now, 'edit')">确 定
+            </el-button>
+        </div>
+    </el-dialog>
     <el-dialog title="调整顺序"
                :visible.sync="updateSequenceDialog.show">
         <el-row :gutter="24">
@@ -1599,6 +1672,7 @@
             dns_ip: '',
             split_str: '✦',
             dangerous_domain: '',
+            white_domain: '',
             self_ip_list: [],
             updateSequenceDialog: {
                 show: false,
@@ -1699,6 +1773,11 @@
                 ip: '',
                 show: false
             },
+            whiteDomainDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
             logList: [],
             startRefreshLog: false,
             startScreenLog: false,
@@ -1719,8 +1798,8 @@
                 type: 'ip',
                 ip: ['not_response', 'response_blacklist', 'can_request'],
                 ipDescribe: ['不允许请求该dns服务器的ip', '不允许访问的ip', '允许请求该dns服务器的ip'],
-                domain: ['immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow', 'dangerous_domain'],
-                domainDescribe: ['域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名', '危险域名']
+                domain: ['dangerous_domain', 'immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
+                domainDescribe: ['危险域名', '域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
             },
             dnsTestList: [],
             ajaxList: [],
@@ -2421,9 +2500,9 @@
                     } else {
                         for (let i = 0; i < this.config.dangerous_domain.length; i++) {
                             let dns = this.config.dangerous_domain[i].data
-                            if (dns === this.requestBlacklistDialog.origin) {
+                            if (dns === this.dangerousDomainDialog.origin) {
                                 this.config.dangerous_domain[i].data = domain
-                                this.requestBlacklistDialog.show = false
+                                this.dangerousDomainDialog.show = false
                                 break
                             }
                         }
@@ -2442,6 +2521,47 @@
                 })
                 this.save({
                     'dangerous_domain': this.config.dangerous_domain
+                })
+            },
+            updateWhiteDomain(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.white_domain.length; i++) {
+                            const data = this.config.white_domain[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.white_domain.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.white_domain.length; i++) {
+                            let dns = this.config.white_domain[i].data
+                            if (dns === this.whiteDomainDialog.origin) {
+                                this.config.white_domain[i].data = domain
+                                this.whiteDomainDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                    return
+                }
+                this.save({
+                    'white_domain': this.config.white_domain
+                })
+            },
+            deleteWhiteDomain(ip) {
+                this.config.white_domain = this.config.white_domain.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'white_domain': this.config.white_domain
                 })
             },
             save(data) {
@@ -2755,6 +2875,25 @@
                         this.getDangerous()
                     }
                 })
+            },
+            checkDomain(domain) {
+                for (let i = 0; i < this.config.dangerous_domain.length; i++) {
+                    const data = this.config.dangerous_domain[i]
+                    let str = `${data.data}`
+                    if (domain.match(str)) {
+                        return true
+                    }
+                }
+
+                for (let i = 0; i < this.config.white_domain.length; i++) {
+                    const data = this.config.white_domain[i]
+                    let str = `${data.data}`
+                    if (domain.match(str)) {
+                        return true
+                    }
+                }
+
+                return false
             },
         },
         mounted() {

@@ -51,15 +51,6 @@
                             <el-col :span="6">
                                 <el-button @click="updateRefreshTime">修改</el-button>
                             </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.refresh_time"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'refresh_time': config.can.refresh_time})"
-                                >
-                                </el-switch>
-                            </el-col>
                         </el-row>
                     </div>
                     <div>
@@ -74,15 +65,6 @@
                                 <el-button v-show="reg.ipReg.test(config.admin_ip)"
                                            @click="save({admin_ip: config.admin_ip})">修改
                                 </el-button>
-                            </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.admin_ip"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'admin_ip': config.can.admin_ip})"
-                                >
-                                </el-switch>
                             </el-col>
                         </el-row>
                     </div>
@@ -101,15 +83,6 @@
                             <el-col :span="6">
                                 <el-button @click="updatePort">修改</el-button>
                             </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.port"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'port': config.can.port})"
-                                >
-                                </el-switch>
-                            </el-col>
                         </el-row>
                     </div>
                     <div>
@@ -123,15 +96,6 @@
                             <el-col :span="6">
                                 <el-button @click="updateWebPort">修改</el-button>
                             </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.web_port"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'web_port': config.can.web_port})"
-                                >
-                                </el-switch>
-                            </el-col>
                         </el-row>
                     </div>
                     <div>
@@ -144,15 +108,6 @@
                             </el-col>
                             <el-col :span="6">
                                 <el-button @click="save({username: config.username})">修改</el-button>
-                            </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.username"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'username': config.can.username})"
-                                >
-                                </el-switch>
                             </el-col>
                         </el-row>
                     </div>
@@ -171,15 +126,6 @@
                             <el-col :span="6">
                                 <el-button @click="save({password: config.password})">修改</el-button>
                             </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.password"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'password': config.can.password})"
-                                >
-                                </el-switch>
-                            </el-col>
                         </el-row>
                     </div>
                     <div>
@@ -193,15 +139,6 @@
                             <el-col :span="6">
                                 <el-button @click="updateLoginWaitSecond">修改</el-button>
                             </el-col>
-                            <el-col :span="4" style="margin-left: 10px">
-                                <el-switch
-                                        v-model="config.can.login_wait_second"
-                                        active-color="#13ce66"
-                                        inactive-color="#ff4949"
-                                        @change="updateCan({'login_wait_second': config.can.login_wait_second})"
-                                >
-                                </el-switch>
-                            </el-col>
                         </el-row>
                     </div>
                 </el-card>
@@ -211,15 +148,6 @@
                     <el-row :gutter="20">
                         <el-col :span="18">
                             elk相关配置
-                        </el-col>
-                        <el-col :span="4" style="margin-left: 10px">
-                            <el-switch
-                                    v-model="config.can.elk"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'elk': config.can.elk})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <div>
@@ -275,15 +203,6 @@
                     <el-row :gutter="20">
                         <el-col :span="18">
                             服务端相关配置
-                        </el-col>
-                        <el-col :span="4" style="margin-left: 10px">
-                            <el-switch
-                                    v-model="config.can.server"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'server': config.can.server})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <div>
@@ -357,15 +276,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>日志筛选</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.screen_rule"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'screen_rule': config.can.screen_rule})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -441,15 +351,6 @@
                         <el-col :span="18">
                             <h3>日志过滤</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.filter_rule"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'filter_rule': config.can.filter_rule})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -513,15 +414,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>dns服务器配置</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.dnsservers"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'dnsservers': config.can.dnsservers})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -587,15 +479,6 @@
                         <el-col :span="18">
                             <h3>不允许请求该dns服务器的ip配置</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.not_response"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'not_response': config.can.not_response})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -655,15 +538,6 @@
                         <el-col :span="18">
                             <h3>允许请求该dns服务器的ip配置</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.can_request"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'can_request': config.can.can_request})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -721,15 +595,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>给域名配置固定ip</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.immobilization"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'immobilization': config.can.immobilization})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -819,15 +684,6 @@
                         <el-col :span="18">
                             <h3>允许访问的域名配置</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.allow"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'allow': config.can.allow})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -883,15 +739,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>不允许访问的ip配置</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.response_blacklist"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'response_blacklist': config.can.response_blacklist})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -952,15 +799,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>返回空值的域名配置</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.not_request"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'not_request': config.can.not_request})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1023,15 +861,6 @@
                         <el-col :span="18">
                             <h3>不允许请求的域名配置</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.request_blacklist"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'request_blacklist': config.can.request_blacklist})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -1090,15 +919,6 @@
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="18">
                             <h3>返回固定ip的域名</h3>
-                        </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.return_ip"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'return_ip': config.can.return_ip})"
-                            >
-                            </el-switch>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1174,15 +994,6 @@
                         <el-col :span="18">
                             <h3>不允许访问的域名</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.not_allow"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'not_allow': config.can.not_allow})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -1242,15 +1053,6 @@
                         <el-col :span="18">
                             <h3>危险域名配置</h3>
                         </el-col>
-                        <el-col :span="4">
-                            <el-switch
-                                    v-model="config.can.dangerous_domain"
-                                    active-color="#13ce66"
-                                    inactive-color="#ff4949"
-                                    @change="updateCan({'dangerous_domain': config.can.dangerous_domain})"
-                            >
-                            </el-switch>
-                        </el-col>
                     </el-row>
                     <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col :span="12">
@@ -1298,6 +1100,108 @@
                                 <el-button type="success" size="mini"
                                            @click="showUpdateSequenceDialog(scope.$index + 1, config.dangerous_domain, 'dangerous_domain')">
                                     改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="18">
+                            <h3>域名白名单配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="white_domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateWhiteDomain(white_domain, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.white_domain"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="白名单"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(whiteDomainDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteWhiteDomain(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('white_domain', config.white_domain[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('white_domain', config.white_domain[scope.$index], false)">
+                                    停用
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="18">
+                            <h3>配置可拉取服务端的配置项</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="config_pull_ip" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="addConfigPullIp(config_pull_ip)">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="Object.keys(config.can)"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="ip"
+                        >
+                            <template slot-scope="scope">{{ scope.row }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(configPullUpdateDialog, scope.row)">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteConfigPullIp(scope.row)">删除
                                 </el-button>
                             </template>
                         </el-table-column>
@@ -1499,6 +1403,70 @@
             </el-button>
         </div>
     </el-dialog>
+    <el-dialog title="编辑域名白名单"
+               :visible.sync="whiteDomainDialog.show">
+        <el-row style="margin-bottom: 10px">
+            域名白名单
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="whiteDomainDialog.now"/>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="whiteDomainDialog.show = false">取 消</el-button>
+            <el-button type="primary" @click="updateWhiteDomain(whiteDomainDialog.now, 'edit')">确 定
+            </el-button>
+        </div>
+    </el-dialog>
+    <el-dialog title="编辑配置项拉取" :visible.sync="configPullUpdateDialog.show">
+        <el-row style="margin-bottom: 10px">
+            ip
+        </el-row>
+        <el-row>
+            <el-col :span="16">
+                <el-input v-model="configPullUpdateDialog.origin"/>
+            </el-col>
+        </el-row>
+        <el-row style="margin-top: 10px">
+            <el-col :span="24">
+                <el-table
+                        :data="filterConfigPullList"
+                        tooltip-effect="dark"
+                        style="width: 100%"
+                        border
+                        :height="300"
+                >
+                    <el-table-column
+                            label="配置项key"
+                    >
+                        <template slot-scope="scope">{{ scope.row['key'] }}</template>
+                    </el-table-column>
+                    <el-table-column
+                            label="配置项名称"
+                    >
+                        <template slot-scope="scope">{{ config_desc[scope.row['key']] }}</template>
+                    </el-table-column>
+                    <el-table-column
+                            label="是否可拉取"
+                    >
+                        <template slot-scope="scope">
+                            <el-switch
+                                v-model="scope.row['value']"
+                                active-color="#13ce66"
+                                inactive-color="#ff4949"
+                                @change="savePull(scope.row['key'], scope.row['value'])"
+                            >
+                            </el-switch>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="configPullUpdateDialog.show = false">取 消</el-button>
+        </div>
+    </el-dialog>
     <el-dialog title="编辑缓存域名"
                :visible.sync="immobilizationDialog.show">
         <el-row style="margin-bottom: 10px">
@@ -1626,9 +1594,41 @@
             request_blacklist: '',
             response_blacklist: '',
             dangerous_domain: '',
+            white_domain: '',
+            config_pull_ip: '',
             dns_ip: '',
             split_str: '✦',
             self_ip_list: [],
+            config_desc: {
+                "admin_ip": '管理员ip',
+                "allow": '允许访问的域名',
+                "can_request": '允许请求该dns服务器的ip',
+                "dangerous_domain": '危险域名',
+                "white_domain": '域名白名单',
+                "dnsservers": 'dns服务器配置',
+                "elk": 'elk日志分析平台配置',
+                "filter_rule": '日志过滤规则',
+                "immobilization": '固定ip',
+                "is_deduplicate": '是否开启日志去重',
+                "is_filter": '是否开启日志过滤',
+                "is_screen": '是否开启日志筛选',
+                "log_num": '日志数',
+                "login_wait_second": '登录等待时间',
+                "not_allow": '不允许访问的域名',
+                "not_request": '返回空值的域名',
+                "not_response": '不允许请求该dns服务器的ip',
+                "password": '登录密码',
+                "port": 'dns端口',
+                "refresh_cache_time": '缓存刷新时间',
+                "refresh_time": '单个域名的缓存刷新时间',
+                "request_blacklist": '不允许请求的域名',
+                "response_blacklist": '不允许访问的ip',
+                "return_ip": '返回固定ip的域名',
+                "screen_rule": '日志筛选规则',
+                "server": '服务端',
+                "username": '登录用户名',
+                "web_port": '网页端端口'
+            },
             updateSequenceDialog: {
                 show: false,
                 old: 0,
@@ -1715,6 +1715,16 @@
                 now: '',
                 show: false
             },
+            whiteDomainDialog: {
+                origin: '',
+                now: '',
+                show: false
+            },
+            configPullUpdateDialog: {
+                origin: '',
+                ip: '',
+                show: false
+            },
             immobilizationDialog: {
                 origin: '',
                 now: {
@@ -1743,8 +1753,8 @@
                 type: 'ip',
                 ip: ['not_response', 'response_blacklist', 'can_request'],
                 ipDescribe: ['不允许请求该dns服务器的ip', '不允许访问的ip', '允许请求该dns服务器的ip'],
-                domain: ['immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
-                domainDescribe: ['域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
+                domain: ['dangerous_domain', 'immobilization', 'allow', 'not_request', 'request_blacklist', 'return_ip', 'not_allow'],
+                domainDescribe: ['危险域名', '域名配置固定ip', '允许访问的域名', '返回空值的域名', '不允许请求的域名', '返回固定ip的域名', '不允许访问的域名']
             },
             dnsTestList: [],
             ajaxList: []
@@ -2410,9 +2420,9 @@
                     } else {
                         for (let i = 0; i < this.config.dangerous_domain.length; i++) {
                             let dns = this.config.dangerous_domain[i].data
-                            if (dns === this.requestBlacklistDialog.origin) {
+                            if (dns === this.dangerousDomainDialog.origin) {
                                 this.config.dangerous_domain[i].data = domain
-                                this.requestBlacklistDialog.show = false
+                                this.dangerousDomainDialog.show = false
                                 break
                             }
                         }
@@ -2431,6 +2441,47 @@
                 })
                 this.save({
                     'dangerous_domain': this.config.dangerous_domain
+                })
+            },
+            updateWhiteDomain(domain, type) {
+                if (this.reg.domainReg.test(domain)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.white_domain.length; i++) {
+                            const data = this.config.white_domain[i]['data']
+                            if (domain === data) {
+                                this.$message.error('域名已存在')
+                                return
+                            }
+                        }
+                        const data = {
+                            data: domain,
+                            enable: true
+                        }
+                        this.config.white_domain.unshift(data)
+                    } else {
+                        for (let i = 0; i < this.config.white_domain.length; i++) {
+                            let dns = this.config.white_domain[i].data
+                            if (dns === this.whiteDomainDialog.origin) {
+                                this.config.white_domain[i].data = domain
+                                this.whiteDomainDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的域名有误')
+                    return
+                }
+                this.save({
+                    'white_domain': this.config.white_domain
+                })
+            },
+            deleteWhiteDomain(ip) {
+                this.config.white_domain = this.config.white_domain.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'white_domain': this.config.white_domain
                 })
             },
             save(data) {
@@ -2722,7 +2773,7 @@
                     }))
                 }
             },
-            updateCan(data) {
+            updateCan(ip, data) {
                 $.ajax({
                     url: '/update_can',
                     type: 'post',
@@ -2737,6 +2788,73 @@
                         }
                         this.$message.success('操作成功')
                         localStorage.setItem('token', res.token)
+                    }
+                })
+            },
+            savePull(key, value) {
+                const ip = this.configPullUpdateDialog.origin
+                this.config.can[ip][key] = value
+                $.ajax({
+                    url: '/update_can',
+                    type: 'post',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    data: JSON.stringify({'ip': ip, 'data': this.config.can[ip]}),
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.$message.success('操作成功')
+                        localStorage.setItem('token', res.token)
+                    }
+                })
+            },
+            addConfigPullIp(ip) {
+                if (!this.reg.ipReg.test(ip)) {
+                    this.$message.error('输入的ip有误')
+                    return
+                }
+                if (ip in this.config.can) {
+                    this.$message.error('ip已存在')
+                    return
+                }
+
+                $.ajax({
+                    url: '/add_pull_ip',
+                    type: 'post',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    data: JSON.stringify({'ip': ip}),
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.$message.success('操作成功')
+                        localStorage.setItem('token', res.token)
+                        this.init()
+                    }
+                })
+            },
+            deleteConfigPullIp(ip) {
+                $.ajax({
+                    url: '/remove_pull_ip',
+                    type: 'post',
+                    contentType: 'application/json',
+                    headers: {
+                        Authorization: localStorage.getItem('token'),
+                    },
+                    data: JSON.stringify({'ip': ip}),
+                    success: (res) => {
+                        if (res.code === 401) {
+                            location.href = `https://${location.hostname}:${location.port}/login.html`
+                        }
+                        this.$message.success('操作成功')
+                        localStorage.setItem('token', res.token)
+                        this.init()
                     }
                 })
             }
@@ -2807,6 +2925,22 @@
                     })
                 }
                 return list
+            },
+            filterConfigPullList() {
+                try {
+                    const ip = this.configPullUpdateDialog.origin
+                    const keys = Object.keys(this.config.can[ip])
+                    const data = []
+                    for (let i = 0; i < keys.length; i++) {
+                        data.push({
+                            'key': keys[i],
+                            'value': this.config.can[ip][keys[i]]
+                        })
+                    }
+                    return data
+                } catch (e) {
+                    return []
+                }
             }
         }
     })

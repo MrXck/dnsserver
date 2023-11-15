@@ -1,3 +1,4 @@
+import copy
 import datetime
 import json
 import logging
@@ -172,13 +173,14 @@ def update_re():
 def update_can():
     try:
         data = request.get_json()
+        ip = data['ip']
+        for k, v in data['data'].items():
+            if k in conf.config['can'][ip]:
+                conf.config['can'][ip][k] = v
+        write_yaml(conf)
+        return {'data': 'ok'}
     except:
         return '请正确携带参数'
-    for k, v in data.items():
-        if k in conf.config['can']:
-            conf.config['can'][k] = v
-    write_yaml(conf)
-    return {'data': 'ok'}
 
 
 @app.route('/all')
@@ -203,7 +205,14 @@ def login():
 def get_config():
     try:
         data = {}
-        for k, v in conf.config['can'].items():
+
+        ip = request.remote_addr
+        if ip not in conf.config['can']:
+            conf.config['can'][ip] = copy.deepcopy(config_template)
+            write_yaml(conf)
+            return jsonify(data)
+
+        for k, v in conf.config['can'][ip].items():
             if v:
                 data[k] = conf.config[k]
         return jsonify(data)
@@ -211,9 +220,69 @@ def get_config():
         return jsonify({'data': '请正确携带参数'})
 
 
+@app.route('/add_pull_ip', methods=['POST'])
+@decorator_login
+def add_pull_ip():
+    try:
+        data = request.get_json()
+        ip = data['ip']
+
+        if ip not in conf.config['can']:
+            conf.config['can'][ip] = copy.deepcopy(config_template)
+            write_yaml(conf)
+            return {'data': 'ok'}
+        else:
+            return {'data': 'ip已存在'}
+    except:
+        return '请正确携带参数'
+
+
+@app.route('/remove_pull_ip', methods=['POST'])
+@decorator_login
+def remove_pull_ip():
+    try:
+        data = request.get_json()
+        ip = data['ip']
+        del conf.config['can'][ip]
+        write_yaml(conf)
+        return {'data': 'ok'}
+    except:
+        return '请正确携带参数'
+
+
 if __name__ == '__main__':
     base_dir = os.path.dirname(sys.argv[0])
     conf = Config()
+    config_template = {
+        "admin_ip": False,
+        "allow": False,
+        "can_request": False,
+        "dangerous_domain": False,
+        "white_domain": False,
+        "dnsservers": False,
+        "elk": False,
+        "filter_rule": False,
+        "immobilization": False,
+        "is_deduplicate": False,
+        "is_filter": False,
+        "is_screen": False,
+        "log_num": False,
+        "login_wait_second": False,
+        "not_allow": False,
+        "not_request": False,
+        "not_response": False,
+        "password": False,
+        "port": False,
+        "refresh_cache_time": False,
+        "refresh_time": False,
+        "request_blacklist": False,
+        "response_blacklist": False,
+        "return_ip": False,
+        "screen_rule": False,
+        "server": False,
+        "username": False,
+        "web_port": False
+    }
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     print('web服务端口为：' + str(conf.web_port))

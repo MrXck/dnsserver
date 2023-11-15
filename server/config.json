@@ -55,33 +55,6 @@
   "time": 10
  },
  "dangerous_domain": [],
- "can": {
-  "admin_ip": true,
-  "allow": true,
-  "can_request": true,
-  "dangerous_domain": true,
-  "dnsservers": true,
-  "elk": true,
-  "filter_rule": true,
-  "immobilization": true,
-  "is_deduplicate": false,
-  "is_filter": false,
-  "is_screen": false,
-  "log_num": false,
-  "login_wait_second": true,
-  "not_allow": true,
-  "not_request": true,
-  "not_response": true,
-  "password": true,
-  "port": true,
-  "refresh_cache_time": false,
-  "refresh_time": true,
-  "request_blacklist": true,
-  "response_blacklist": true,
-  "return_ip": true,
-  "screen_rule": true,
-  "server": true,
-  "username": true,
-  "web_port": false
- }
+ "white_domain": [],
+ "can": {}
 }

@@ -236,7 +236,7 @@ class Config:
     refresh_job_start = False
     need_clean_cache_key_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'return_ip', 'not_response',
                                  'can_request', 'request_blacklist', 'screen_rule', 'filter_rule', 'immobilization',
-                                 'dnsservers']
+                                 'dnsservers', 'dangerous_domain']
     need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist',
                                        'filter_rule', 'dangerous_domain']
     need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
@@ -590,11 +590,15 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                     return None
 
-            conf.insert(domain, ip)
-            logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
-            conf.log(
-                f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}ip为{conf.symbol}{ip}{conf.symbol}')
-            return ip
+            # conf.insert(domain, ip)
+            # logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
+            # conf.log(
+            #     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}ip为{conf.symbol}{ip}{conf.symbol}')
+            # return ip
+            conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file, domain, address[0])
+            conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
+            return None
+
         except Exception as e:
             logger.error(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
             return None
@@ -648,7 +652,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         if re.search(dangerous_domain, domain):
                             conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file,
                                                                                 domain, address[0])
-                            conf.log(f'{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
+                            conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
                             flag = True
                             break
                     if flag:
