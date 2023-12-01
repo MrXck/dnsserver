@@ -523,6 +523,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
 
             # 正则匹配是否是允许访问的域名
             for allow in conf.allow:
+                print(f'{allow}, {domain}')
                 if allow.search(domain):
                     try:
                         ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
@@ -797,16 +798,16 @@ def update_config(data: dict, conf):
     for k, v in data.items():
         conf.config[k] = v
 
+        if k in conf.need_clean_cache_key_list:
+            conf.cache = {}
+            conf.write_file(conf)
+
         if k == 'screen_rule':
             conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
 
         elif k == 'dnsservers':
             conf.dns_resolver.nameservers = conf.get_enable_list(v)
             conf.dns_servers = conf.get_enable_list(v)
-
-        elif k in conf.need_clean_cache_key_list:
-            conf.cache = {}
-            conf.write_file(conf)
 
         elif k in conf.need_enable_and_re_compile_list:
             conf[k] = conf.get_enable_and_re_compile_list(v)
