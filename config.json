@@ -1,6 +1,11 @@
 {
  "not_allow": [],
- "allow": [],
+ "allow": [
+  {
+   "data": ".*",
+   "enable": true
+  }
+ ],
  "not_request": [],
  "return_ip": {
   "domain": [],

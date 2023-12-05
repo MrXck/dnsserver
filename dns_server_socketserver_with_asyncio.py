@@ -105,9 +105,7 @@ class TimeLoggerRolloverHandler(TimedRotatingFileHandler):
         if os.path.exists(dfn):
             os.remove(dfn)
 
-        print(self.baseFilename, '...before')
         self.baseFilename = dfn  # 直接将将baseFilename 指向新文件
-        print(self.baseFilename, '...after')
 
         if not self.delay:
             self.stream = self._open()
@@ -523,7 +521,6 @@ class DNSServer(socketserver.DatagramRequestHandler):
 
             # 正则匹配是否是允许访问的域名
             for allow in conf.allow:
-                print(f'{allow}, {domain}')
                 if allow.search(domain):
                     try:
                         ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
