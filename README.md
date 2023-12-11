@@ -25,7 +25,7 @@
 15. 可以在客户端连接服务端之后直接通过服务端去查看/修改各个客户端的配置
 
 需要向项目目录下放置 server.crt 和 server.key 证书 或者 在代码中去掉 ssl_context=('server.crt', 'server.key')
-由于技术有限无法做出客户端所以使用 vue + elementUI 网页来作为配置
+使用 vue + elementUI 网页来作为配置
 运行后浏览器打开 https://127.0.0.1:5000 就可以配置了
 
 服务端的地址默认为 https://127.0.0.1:5001
