@@ -3,9 +3,15 @@ import datetime
 import json
 import logging
 import os
+import socket
+import socketserver
+import struct
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from threading import Lock
+from uuid import uuid4
 
 import jwt
 from flask import Flask, request, jsonify, redirect
@@ -250,6 +256,81 @@ def remove_pull_ip():
         return '请正确携带参数'
 
 
+@app.route('/get_all_client', methods=['GET'])
+@decorator_login
+def get_all_client():
+    try:
+        return {'data': list(server_config.ip_socket.keys())}
+    except:
+        return '请正确携带参数'
+
+
+@app.route('/client/<ip>', methods=['POST'])
+@decorator_login
+def client(ip):
+    try:
+        data = request.get_json()
+        method = data['method']
+        string = str(uuid4())
+        server_config.task_dict[string] = {
+            'method': method,
+            'result': None
+        }
+        data['random'] = string
+        Server.send_message(ip, data)
+
+        while 1:
+            time.sleep(0.5)
+            if server_config.task_dict[string]['result'] is not None:
+                result = server_config.task_dict[string]['result']
+                del server_config.task_dict[string]
+                return result
+
+    except Exception as e:
+        print(e)
+        return {'code': 1, 'data': '请正确携带参数'}
+
+
+class ServerConfig(object):
+    def __init__(self):
+        self.ip_socket = {}
+        self.encode = 'utf-8'
+        self.task_dict = {}
+
+
+class Server(socketserver.BaseRequestHandler):
+
+    def handle(self):
+        conn = self.request
+
+        while True:
+            try:
+                # 在这里处理连接断开时的逻辑
+                server_config.ip_socket[self.client_address[0]] = self.request
+                length = conn.recv(4)
+                length = struct.unpack('>I', length)[0]
+                data = conn.recv(length)
+                data = json.loads(data)
+                server_config.task_dict[data['random']]['result'] = data
+            except ConnectionResetError:
+                # 连接断开时的操作
+                del server_config.ip_socket[self.client_address[0]]
+
+    @staticmethod
+    def send_message(ip, data):
+        try:
+            data = f'{json.dumps(data)}'.encode(server_config.encode)
+            data_len = struct.pack('>I', len(data))
+            server_config.ip_socket[ip].send(data_len + data)
+        except:
+            del server_config.ip_socket[ip]
+
+
+def start_socket():
+    serve = socketserver.ThreadingTCPServer(('0.0.0.0', conf.server['port'] + 1), Server)
+    serve.serve_forever()
+
+
 if __name__ == '__main__':
     base_dir = os.path.dirname(sys.argv[0])
     conf = Config()
@@ -286,6 +367,11 @@ if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     print('web服务端口为：' + str(conf.web_port))
+
+    server_config = ServerConfig()
+    socket_pool = ThreadPoolExecutor(1)
+    socket_pool.submit(start_socket)
+
     try:
         app.run(host='0.0.0.0', port=conf.web_port, ssl_context=('server.crt', 'server.key'))
     except Exception as e:

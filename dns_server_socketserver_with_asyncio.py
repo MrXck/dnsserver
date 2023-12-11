@@ -8,6 +8,7 @@ import queue
 import re
 import socket
 import socketserver
+import struct
 import subprocess
 import sys
 import time
@@ -593,7 +594,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # conf.log(
             #     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}ip为{conf.symbol}{ip}{conf.symbol}')
             # return ip
-            conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file, domain, address[0])
+            # conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file, domain, address[0])
             conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
             return None
 
@@ -830,6 +831,8 @@ def update_config(data: dict, conf):
         if k == 'server':
             conf.config_job_start = False
             schedule.cancel_job(conf.get_config_job)
+            client.start_connect = False
+            client.client_socket.close()
             if 'time' in v:
                 conf.config[k]['time'] = int(v['time'])
                 conf[k]['time'] = int(v['time'])
@@ -837,7 +840,9 @@ def update_config(data: dict, conf):
                 conf.config[k]['port'] = int(v['port'])
                 conf[k]['port'] = int(v['port'])
             if v['enable']:
+                client.start_connect = True
                 schedule_pool.submit(schedule_get_config_task)
+                socket_pool.submit(client.monitor)
 
 
 def check_token():
@@ -1031,6 +1036,146 @@ def first_package():
     conn.sendto(b'package', ('127.0.0.1', conf.port))
 
 
+class Client(object):
+    def __init__(self):
+        self.encode = 'utf-8'
+        self.key_method = {
+            "all": self.all,
+            'get_ip': self.get_ip,
+            'get_self_ip': self.get_self_ip,
+            'update': self.update,
+            'log': self.get_log,
+            'check_dns': self.check_dns,
+            'remove_dangerous': self.remove_dangerous,
+            'get_dangerous': self.get_dangerous,
+        }
+        self.start_connect = False
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def all(self, data):
+        f = open(os.path.join(base_dir, conf.config_filename), encoding='utf-8', mode='r')
+        data = json.loads(f.read())
+        f.close()
+        return {'data': data}
+
+    def get_ip(self, data):
+        domain = data.get('domain', None)
+        result = {'ip': ''}
+        if domain:
+            try:
+                result['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            except:
+                pass
+        return result
+
+    def get_self_ip(self, data):
+        self_ip = ''
+        try:
+            self_ip = conf.get_ip_list()
+        except:
+            pass
+        return {'ip': self_ip}
+
+    def set_dns(self, data):
+        dns_ip = data.get('dns', None)
+        result = {'code': 0}
+        if dns_ip:
+            try:
+                conf.set_dns(dns_ip)
+                return result
+            except:
+                return {'code': 2}
+        return {'code': 1}
+
+    def update(self, data):
+        update_config(data, conf)
+        write_yaml(conf)
+        return {'data': {}}
+
+    def get_log(self, data):
+        return {'data': list(log_queue.queue)[::-1]}
+
+    def check_dns(self, data):
+        result = []
+        for i in conf.dns_servers:
+            start = time.time()
+            status = conf.check_dns_server(i)
+            end = time.time() - start
+            dic = {
+                'ip': i,
+                'result': f''
+            }
+            if status == 1:
+                dic['result'] = f'在线/耗时:{round(end * 1000, 3)}ms'
+                result.append(dic)
+            elif status == 2:
+                dic['result'] = f'未收到响应'
+                result.append(dic)
+            else:
+                dic['result'] = f'报错'
+                result.append(dic)
+        return {'data': result}
+
+    def remove_dangerous(self, data):
+        domain = data['domain']
+        ip = data['ip']
+        with open(os.path.join(base_dir, conf.total_filename), encoding="utf-8", mode="r") as f:
+            data = json.load(f)
+        if domain not in data:
+            return {'data': '操作成功'}
+        if ip not in data[domain]:
+            return {'data': '操作成功'}
+        del data[domain][ip]
+        if len(data[domain].keys()) == 0:
+            del data[domain]
+        with open(os.path.join(base_dir, conf.total_filename), encoding="utf-8", mode="w") as f:
+            f.write(json.dumps(data, cls=DateEncoder, indent=4, ensure_ascii=False))
+        return {'data': '操作成功'}
+
+    def get_dangerous(self, data):
+        if not os.path.exists(os.path.join(base_dir, conf.total_filename)):
+            with open(os.path.join(base_dir, conf.total_filename), encoding="utf-8", mode="w") as f:
+                f.write(json.dumps({}))
+            return {'data': {}}
+        with open(os.path.join(base_dir, conf.total_filename), encoding="utf-8", mode="r") as f:
+            data = json.load(f)
+        return {'data': data}
+
+    def connect(self):
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect((conf.server['host'], conf.server['port'] + 1))
+
+    def send_message(self, data, string):
+        data['random'] = string
+        data = f'{json.dumps(data)}'.encode(self.encode)
+        data_len = struct.pack('>I', len(data))
+        self.client_socket.send(data_len + data)
+
+    def monitor(self):
+        self.start_connect = True
+        self.connect()
+        while self.start_connect:
+            try:
+                length = self.client_socket.recv(4)
+                if length == b'':
+                    # self.logger.error("连接断开 正在重新连接....")
+                    ...
+                length = struct.unpack('>I', length)[0]
+                data = self.client_socket.recv(length).decode(self.encode)
+
+                try:
+                    data = json.loads(data)
+                    string = data['random']
+                    result = self.key_method[data['method']](data['data'])
+                    self.send_message(result, string)
+                except Exception as e:
+                    print(e)
+                    # self.logger.error(f'服务端发来的消息解析失败.... 消息为: {data} {e}')
+            except Exception as e:
+                time.sleep(1)
+                self.connect()
+
+
 if __name__ == '__main__':
     JWT_SALT = 'fgdkljdlkfa#^&%^@$^!*^*($&@fdiskhgjfkdhfidofds*&^%&$%&'
     log_dir = "log"  # 日志存放文件夹名称
@@ -1051,11 +1196,15 @@ if __name__ == '__main__':
     pool = ThreadPoolExecutor(1)
     pool.submit(run)
     schedule_pool = ThreadPoolExecutor(2)
+    socket_pool = ThreadPoolExecutor(1)
+    client = Client()
     if conf.server['enable']:
         schedule_pool.submit(schedule_task)
         schedule_pool.submit(schedule_get_config_task)
+        socket_pool.submit(client.monitor)
     else:
         schedule_pool.submit(schedule_task)
+
     Thread(target=first_package).start()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(dns_server(loop))
