@@ -113,7 +113,7 @@ def check_token():
     authorization = request.headers.get('Authorization')
     token_result = parse_payload(authorization)
     if not token_result['status']:
-        return '请登录后再进行操作'
+        return {'data': '请登录后再进行操作'}
 
 
 def try_login(data):
@@ -168,7 +168,7 @@ def update_re():
     try:
         data = request.get_json()
     except:
-        return '请正确携带参数'
+        return {'data': '请正确携带参数'}
     update_config(data, conf)
     write_yaml(conf)
     return {'data': 'ok'}
@@ -186,7 +186,7 @@ def update_can():
         write_yaml(conf)
         return {'data': 'ok'}
     except:
-        return '请正确携带参数'
+        return {'data': '请正确携带参数'}
 
 
 @app.route('/all')
@@ -240,7 +240,7 @@ def add_pull_ip():
         else:
             return {'data': 'ip已存在'}
     except:
-        return '请正确携带参数'
+        return {'data': '请正确携带参数'}
 
 
 @app.route('/remove_pull_ip', methods=['POST'])
@@ -253,7 +253,7 @@ def remove_pull_ip():
         write_yaml(conf)
         return {'data': 'ok'}
     except:
-        return '请正确携带参数'
+        return {'data': '请正确携带参数'}
 
 
 @app.route('/get_all_client', methods=['GET'])
@@ -262,7 +262,7 @@ def get_all_client():
     try:
         return {'data': list(server_config.ip_socket.keys())}
     except:
-        return '请正确携带参数'
+        return {'data': '请正确携带参数'}
 
 
 @app.route('/client/<ip>', methods=['POST'])
