@@ -23,7 +23,7 @@ import psutil
 import requests
 import schedule
 from dns.resolver import Resolver
-from dnslib import DNSRecord, QTYPE, DNSHeader, RR, A
+from dnslib import DNSRecord, QTYPE, DNSHeader, RR, A, AAAA
 from flask import Flask, request, jsonify, redirect
 
 app = Flask(__name__, static_folder='static', static_url_path='')
@@ -616,6 +616,20 @@ class DNSServer(socketserver.DatagramRequestHandler):
         record = DNSRecord(header, q=income_record.q, a=RR(domain, query_type_int, rdata=r_data, ttl=ttl))
         return record
 
+    def reply_for_AAAA(self, income_record, ip, ttl=None):
+        r_data = AAAA(ip)
+        header = DNSHeader(id=income_record.header.id, bitmap=income_record.header.bitmap, qr=1)
+        domain = income_record.q.qname
+        query_type_int = QTYPE.reverse.get('AAAA') or income_record.q.qtype
+        record = DNSRecord(header, q=income_record.q, a=RR(domain, query_type_int, rdata=r_data, ttl=ttl))
+        return record
+
+    def get_ipv6_from_domain(self, domain, address):
+        try:
+            return conf.dns_resolver.resolve(domain, 'AAAA')[0].to_text()
+        except:
+            return None
+
     def dns_handler(self, s, income_record, address, domain):
         try:
             qtype = QTYPE.get(income_record.q.qtype)
@@ -625,6 +639,12 @@ class DNSServer(socketserver.DatagramRequestHandler):
             ip = self.get_ip_from_domain(domain, address)
             if ip:
                 response = self.reply_for_A(income_record, ip=ip, ttl=60)
+                s.sendto(response.pack(), address)
+                return
+        elif qtype == 'AAAA':
+            ip = self.get_ipv6_from_domain(domain, address)
+            if ip:
+                response = self.reply_for_AAAA(income_record, ip=ip, ttl=60)
                 s.sendto(response.pack(), address)
                 return
 
