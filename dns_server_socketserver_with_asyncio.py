@@ -199,6 +199,7 @@ class Config:
     response_blacklist = []
     cache = {}
     pool = ThreadPoolExecutor(1)
+    log_pool = ThreadPoolExecutor(1)
     write_file_pool = ThreadPoolExecutor(1)
     write_dangerous_domain_logger_file_pool = ThreadPoolExecutor(1)
     lock = Lock()
@@ -233,6 +234,7 @@ class Config:
     get_config_job = None
     config_job_start = False
     refresh_job_start = False
+    logger = None
     need_clean_cache_key_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'return_ip', 'not_response',
                                  'can_request', 'request_blacklist', 'screen_rule', 'filter_rule', 'immobilization',
                                  'dnsservers', 'dangerous_domain']
@@ -353,6 +355,18 @@ class Config:
         else:
             self._log(self, data)
 
+    def log_info_file(self, data):
+        if self.logger is not None:
+            self.log_pool.submit(self._log_info_file, self, data)
+        else:
+            self._log_info_file(self, data)
+
+    def log_error_file(self, data):
+        if self.logger is not None:
+            self.log_pool.submit(self._log_error_file, self, data)
+        else:
+            self._log_error_file(self, data)
+
     @staticmethod
     def _log(self, data):
         qsize = log_queue.qsize()
@@ -391,6 +405,14 @@ class Config:
             log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + data)
         else:
             log_queue.put(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + data)
+
+    @staticmethod
+    def _log_info_file(self, data):
+        self.logger.info(data)
+
+    @staticmethod
+    def _log_error_file(self, data):
+        self.logger.error(data)
 
     @staticmethod
     def handle_ip(data):
@@ -459,11 +481,13 @@ class Config:
                 seconds=conf.refresh_time) < datetime.datetime.now():
             ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
             conf.update(domain, ip)
-            logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
+            # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
+            conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
             conf.log(
                 f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{ip}{conf.symbol}')
             return ip
-        logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
+        # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
+        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
         conf.log(
             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{cache_data[domain]["ip"]}{conf.symbol}')
         return cache_data[domain]['ip']
@@ -515,7 +539,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 for i in range(len(conf.immobilization['domain'])):
                     if conf.immobilization['domain'][i].search(domain):
                         return_ip = conf.immobilization["ip"][i]['data']
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        # logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
                         conf.log(
                             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回固定ip{conf.symbol}{return_ip}{conf.symbol}')
                         return return_ip
@@ -529,18 +554,21 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         # 查看 ip 是否在 ip 黑名单里
                         for response_blacklist in conf.response_blacklist:
                             if response_blacklist.search(ip):
-                                logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在黑名单里 {ip}')
+                                # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在黑名单里 {ip}')
+                                conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip在黑名单里 {ip}')
                                 conf.log(
                                     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                                 return None
 
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
+                        # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
+                        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip {ip}')
                         conf.log(
                             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip{conf.symbol}{ip}{conf.symbol}')
                         conf.insert(domain, ip)
                         return ip
                     except:
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip None')
+                        # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip None')
+                        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip None')
                         conf.log(
                             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip{conf.symbol}None{conf.symbol}')
                         return None
@@ -548,7 +576,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 不向上请求的域名
             for not_request in conf.not_request:
                 if not_request.search(domain):
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 不返回结果')
+                    # logger.info(f'{address[0]} 请求解析域名 {domain} 不返回结果')
+                    conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 不返回结果')
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}不返回结果{conf.symbol}')
                     return None
@@ -556,7 +585,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 正则匹配请求域名是否在黑名单里
             for request_blacklist in conf.request_blacklist:
                 if request_blacklist.search(domain):
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
+                    # logger.info(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
+                    conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 被黑名单拦截')
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}被黑名单拦截{conf.symbol}')
                     return None
@@ -566,7 +596,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 for i in range(len(conf.return_ip['domain'])):
                     if conf.return_ip['domain'][i].search(domain):
                         return_ip = conf.return_ip["ip"][i]['data']
-                        logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        # logger.info(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
+                        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回固定ip {return_ip}')
                         conf.log(
                             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回固定ip{conf.symbol}{return_ip}{conf.symbol}')
                         return return_ip
@@ -574,7 +605,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 正则匹配是否是不允许访问的域名
             for not_allow in conf.not_allow:
                 if not_allow.search(domain):
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
+                    # logger.info(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
+                    conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 是不允许访问的域名')
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}是不允许访问的域名')
                     return None
@@ -584,7 +616,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             # 查看 ip 是否在 ip 黑名单里
             for response_blacklist in conf.response_blacklist:
                 if response_blacklist.search(ip):
-                    logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+                    # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+                    conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
                     return None
@@ -599,7 +632,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             return None
 
         except Exception as e:
-            logger.error(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
+            # logger.error(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
+            conf.log_error_file(f'{address[0]} 解析域名 {domain} 解析ip异常异常为 {e}')
             return None
 
     def reply_for_not_found(self, income_record):
@@ -630,19 +664,19 @@ class DNSServer(socketserver.DatagramRequestHandler):
         except:
             return None
 
-    def dns_handler(self, s, income_record, address, domain):
+    def dns_handler(self, s, income_record, address, domain, client_addr):
         try:
             qtype = QTYPE.get(income_record.q.qtype)
         except:
             qtype = 'unknown'
         if qtype == 'A':
-            ip = self.get_ip_from_domain(domain, address)
+            ip = self.get_ip_from_domain(domain, client_addr)
             if ip:
                 response = self.reply_for_A(income_record, ip=ip, ttl=60)
                 s.sendto(response.pack(), address)
                 return
         elif qtype == 'AAAA':
-            ip = self.get_ipv6_from_domain(domain, address)
+            ip = self.get_ipv6_from_domain(domain, client_addr)
             if ip:
                 response = self.reply_for_AAAA(income_record, ip=ip, ttl=60)
                 s.sendto(response.pack(), address)
@@ -657,11 +691,17 @@ class DNSServer(socketserver.DatagramRequestHandler):
         while True:
             try:
                 message, address = conn.recvfrom(8192)
+                server_address = address
+                if b"\n" in message:
+                    # PROXY TCP4 192.168.101.1 192.168.101.60 63421 53
+                    addr_info, message = message.split(b"\n")
+                    address = (addr_info.split(b" ")[2].decode("utf-8"), address[-1])
                 try:
                     income_record = DNSRecord.parse(message)
                     domain = str(income_record.q.qname).strip('.')
                 except:
-                    logger.error(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
+                    # logger.error(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
+                    conf.log_error_file(f'{address[0]} 请求解析的消息 {message} 解析此信息失败')
                     continue
 
                 try:
@@ -682,7 +722,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     for not_response in conf.not_response:
                         if type(not_response) == re.Pattern:
                             if not_response.search(address[0]):
-                                logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                # logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                                 conf.log(
                                     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
@@ -690,7 +731,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         else:
                             start, end = not_response.split('-')
                             if int(start) <= conf.ip_to_int(address[0]) <= int(end):
-                                logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                # logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                                 conf.log(
                                     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
@@ -703,13 +745,13 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     for can_request in conf.can_request:
                         if type(can_request) == re.Pattern:
                             if can_request.search(address[0]):
-                                self.dns_handler(conn, income_record, address, domain)
+                                self.dns_handler(conn, income_record, server_address, domain, address)
                                 can_flag = True
                                 break
                         else:
                             start, end = can_request.split('-')
                             if int(start) <= conf.ip_to_int(address[0]) <= int(end):
-                                self.dns_handler(conn, income_record, address, domain)
+                                self.dns_handler(conn, income_record, server_address, domain, address)
                                 can_flag = True
                                 break
 
@@ -720,7 +762,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}没有被允许')
                 except Exception as e:
-                    logger.error(f'{address[0]} 请求解析域名 {domain} 是否为黑名单异常异常为{e}')
+                    # logger.error(f'{address[0]} 请求解析域名 {domain} 是否为黑名单异常异常为{e}')
+                    conf.log_error_file(f'{address[0]} 请求解析域名 {domain} 是否为黑名单异常异常为{e}')
             except Exception as e:
                 ...
 
@@ -893,7 +936,8 @@ def try_login(data):
                 conf.fail_login_num += 1
                 conf.wait_second = conf.login_wait_second ** conf.fail_login_num
                 conf.lately_login_time = datetime.datetime.now()
-            logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
+            # logger.error(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
+            conf.log_error_file(f'{request.remote_addr} 尝试登录 用户名:{username} 密码:{password} 登录失败')
             return jsonify({'data': '登录失败'})
     finally:
         conf.lock.release()
@@ -1018,7 +1062,8 @@ def schedule_task():
                 conf.is_fresh = False
                 break
         except Exception as e:
-            logger.error(f'刷新缓存失败 {e}')
+            # logger.error(f'刷新缓存失败 {e}')
+            conf.log_error_file(f'刷新缓存失败 {e}')
             time.sleep(1)
 
 
@@ -1032,7 +1077,8 @@ def schedule_get_config_task():
             schedule.run_pending()
             time.sleep(1)
         except Exception as e:
-            logger.error(f'从服务端获取配置失败 {e}')
+            # logger.error(f'从服务端获取配置失败 {e}')
+            conf.log_error_file(f'从服务端获取配置失败 {e}')
             time.sleep(1)
 
 
@@ -1213,6 +1259,7 @@ if __name__ == '__main__':
     logger = get_myProjectLogger("dns", "log", elk=conf.elk, when='H', interval=1)
     dangerous_domain_logger = get_myProjectLogger("dangerous_domain", "dangerous_log", elk=conf.elk, when='H',
                                                   interval=1)
+    conf.logger = logger
     pool = ThreadPoolExecutor(1)
     pool.submit(run)
     schedule_pool = ThreadPoolExecutor(2)
