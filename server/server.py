@@ -362,6 +362,7 @@ if __name__ == '__main__':
         "screen_rule": False,
         "server": False,
         "username": False,
+        "dangerous_domain_return_ip": False,
         "web_port": False
     }
     log = logging.getLogger('werkzeug')
