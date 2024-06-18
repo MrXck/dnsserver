@@ -496,20 +496,16 @@ class Config:
         return data_list
 
     def get_cache_ip(self, domain, address, cache_data):
+        ip = cache_data[domain]['ip']
         if cache_data[domain]['update_time'] + datetime.timedelta(
                 seconds=conf.refresh_time) < datetime.datetime.now():
-            ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-            conf.update(domain, ip)
-            # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
-            conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
-            conf.log(
-                f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{ip}{conf.symbol}')
-            return ip
+            conf.delete(domain)
+            # conf.update(domain, ip)
         # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
         conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
         conf.log(
             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{cache_data[domain]["ip"]}{conf.symbol}')
-        return cache_data[domain]['ip']
+        return ip
 
     @staticmethod
     def get_enable_and_re_compile_list(data):
@@ -736,10 +732,9 @@ class DNSServer(socketserver.DatagramRequestHandler):
                                                                                 domain, address[0])
                             conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
                             flag = True
-                            conf.dangerous_domain_return_ip
-                            self.reply(conn, server_address, income_record, conf.dangerous_domain_return_ip)
                             break
                     if flag:
+                        self.reply(conn, server_address, income_record, conf.dangerous_domain_return_ip)
                         continue
 
                     # 正则匹配请求 ip 是否在黑名单里
@@ -763,6 +758,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                                 not_flag = True
                                 break
                     if not_flag:
+                        self.reply(conn, server_address, income_record, conf.dangerous_domain_return_ip)
                         continue
 
                     # 正则匹配请求 ip 是否是允许的ip
@@ -779,10 +775,9 @@ class DNSServer(socketserver.DatagramRequestHandler):
                                 self.dns_handler(conn, income_record, server_address, domain, address)
                                 can_flag = True
                                 break
-
                     if can_flag:
                         continue
-
+                    self.reply(conn, server_address, income_record, conf.dangerous_domain_return_ip)
                     logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 没有被允许')
                     conf.log(
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}没有被允许')
@@ -1063,11 +1058,14 @@ def get_new_cache():
     conf.cache_bak = copy.deepcopy(conf.cache)
     conf.use_cache_bak = True
     for domain, ip_dict in conf.cache.items():
-        try:
-            ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-            ip_dict['update_time'] = now
-        except:
-            continue
+        if domain['update_time'] + datetime.timedelta(
+                seconds=conf.refresh_time) < datetime.datetime.now():
+            try:
+                # ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+                # ip_dict['update_time'] = now
+                conf.delete(domain)
+            except:
+                continue
     conf.use_cache_bak = False
     conf.cache_bak = copy.deepcopy(conf.cache)
     conf.write_file_pool.submit(conf.write_file, conf)
