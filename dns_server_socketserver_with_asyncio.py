@@ -496,15 +496,17 @@ class Config:
         return data_list
 
     def get_cache_ip(self, domain, address, cache_data):
-        ip = cache_data[domain]['ip']
-        if cache_data[domain]['update_time'] + datetime.timedelta(
-                seconds=conf.refresh_time) < datetime.datetime.now():
-            conf.delete(domain)
-            # conf.update(domain, ip)
-        # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
-        conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
-        conf.log(
-            f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{cache_data[domain]["ip"]}{conf.symbol}')
+        ip = False
+        if domain in cache_data:
+            ip = cache_data[domain]['ip']
+            if cache_data[domain]['update_time'] + datetime.timedelta(
+                    seconds=conf.refresh_time) < datetime.datetime.now():
+                conf.delete(domain)
+                # conf.update(domain, ip)
+            # logger.info(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {cache_data[domain]["ip"]}')
+            conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 命中缓存返回的ip {ip}')
+            conf.log(
+                f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}命中缓存返回的ip{conf.symbol}{ip}{conf.symbol}')
         return ip
 
     @staticmethod
@@ -1057,15 +1059,15 @@ def get_new_cache():
     now = datetime.datetime.now()
     conf.cache_bak = copy.deepcopy(conf.cache)
     conf.use_cache_bak = True
+    clear_list = []
     for domain, ip_dict in conf.cache.items():
-        if domain['update_time'] + datetime.timedelta(
-                seconds=conf.refresh_time) < datetime.datetime.now():
-            try:
-                # ip_dict['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-                # ip_dict['update_time'] = now
-                conf.delete(domain)
-            except:
-                continue
+        if ip_dict['update_time'] + datetime.timedelta(seconds=conf.refresh_time) < now:
+            clear_list.append(domain)
+    for clear in clear_list:
+        try:
+            conf.delete(clear)
+        except:
+            continue
     conf.use_cache_bak = False
     conf.cache_bak = copy.deepcopy(conf.cache)
     conf.write_file_pool.submit(conf.write_file, conf)
