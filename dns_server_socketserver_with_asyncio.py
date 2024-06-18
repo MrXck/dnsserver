@@ -263,6 +263,7 @@ class Config:
         self.filter_rule = self.get_enable_and_re_compile_list(config['filter_rule'])
         self.screen_rule = self.get_enable_and_re_compile_list_with_not_exact_match(config['screen_rule'])
         self.dangerous_domain = self.get_enable_and_re_compile_list(config['dangerous_domain'])
+        self.dangerous_domain_return_ip = config['dangerous_domain_return_ip']
 
         self.immobilization = Config.handle_ip(config['immobilization'])
         self.return_ip = Config.handle_ip(config['return_ip'])
@@ -611,16 +612,16 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}是不允许访问的域名')
                     return None
 
-            ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
-
-            # 查看 ip 是否在 ip 黑名单里
-            for response_blacklist in conf.response_blacklist:
-                if response_blacklist.search(ip):
-                    # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
-                    conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
-                    conf.log(
-                        f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
-                    return None
+            # ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            #
+            # # 查看 ip 是否在 ip 黑名单里
+            # for response_blacklist in conf.response_blacklist:
+            #     if response_blacklist.search(ip):
+            #         # logger.info(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+            #         conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 返回的ip在ip黑名单里 {ip}')
+            #         conf.log(
+            #             f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}返回的ip在ip黑名单里{conf.symbol}{ip}{conf.symbol}')
+            #         return None
 
             # conf.insert(domain, ip)
             # logger.info(f'{address[0]} 请求解析域名 {domain} ip为 {ip}')
@@ -685,6 +686,10 @@ class DNSServer(socketserver.DatagramRequestHandler):
         response = self.reply_for_not_found(income_record)
         s.sendto(response.pack(), address)
 
+    def reply(self, s, address, income_record, ip):
+        response = self.reply_for_A(income_record, ip=ip, ttl=60)
+        s.sendto(response.pack(), address)
+
     def handle(self):
         conn = self.socket
 
@@ -713,6 +718,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                                                                                 domain, address[0])
                             conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
                             flag = True
+                            conf.dangerous_domain_return_ip
+                            self.reply(conn, server_address, income_record, conf.dangerous_domain_return_ip)
                             break
                     if flag:
                         continue

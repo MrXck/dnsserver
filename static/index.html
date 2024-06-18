@@ -193,7 +193,7 @@
                                 tooltip-effect="dark"
                                 style="width: 100%"
                                 border
-                                :height="710"
+                                :height="790"
                         >
                             <el-table-column
                                     label="日志"
@@ -329,6 +329,20 @@
                             </el-col>
                             <el-col :span="12">
                                 <el-button @click="updateLoginWaitSecond">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            危险域名的返回ip
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.dangerous_domain_return_ip"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button  v-show="reg.ipReg.test(config.dangerous_domain_return_ip)"
+                                        @click="updateDangerousDomainReturnIp">修改</el-button>
                             </el-col>
                         </el-row>
                     </div>
@@ -554,6 +568,65 @@
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="20">
+                            <h3>危险域名配置</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="dangerous_domain" placeholder="请输入域名" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateDangerousDomain(dangerous_domain, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.dangerous_domain"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="危险域名"
+                        >
+                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="primary" size="mini"
+                                           @click="showDialog(requestBlacklistDialog, scope.row['data'])">编辑
+                                </el-button>
+                                <el-button type="danger" size="mini" @click="deleteDangerousDomain(scope.row)">删除
+                                </el-button>
+                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
+                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], true)">
+                                    启用
+                                </el-button>
+                                <el-button v-if="scope.row.enable" type="success" size="mini"
+                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], false)">
+                                    停用
+                                </el-button>
+                                <el-button type="success" size="mini"
+                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.dangerous_domain, 'dangerous_domain')">
+                                    改序
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
                         <el-col>
                             <h3>不允许请求该dns服务器的ip配置</h3>
                         </el-col>
@@ -668,6 +741,8 @@
                     </el-table>
                 </el-card>
             </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -754,8 +829,6 @@
                     </el-table>
                 </el-card>
             </el-col>
-        </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -775,7 +848,7 @@
                             :data="config.allow"
                             tooltip-effect="dark"
                             style="width: 100%"
-                            :height="300"
+                            :height="350"
                             border
                     >
                         <el-table-column
@@ -832,7 +905,7 @@
                             tooltip-effect="dark"
                             style="width: 100%"
                             border
-                            :height="300"
+                            :height="350"
                     >
                         <el-table-column
                                 label="序号"
@@ -872,6 +945,8 @@
                     </el-table>
                 </el-card>
             </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -892,7 +967,7 @@
                             tooltip-effect="dark"
                             style="width: 100%"
                             border
-                            :height="300"
+                            :height="350"
                     >
                         <el-table-column
                                 label="序号"
@@ -931,8 +1006,6 @@
                     </el-table>
                 </el-card>
             </el-col>
-        </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1066,6 +1139,8 @@
                     </el-table>
                 </el-card>
             </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="8">
                 <el-card>
                     <el-row :gutter="20" style="margin-bottom: 10px">
@@ -1116,67 +1191,6 @@
                                 </el-button>
                                 <el-button type="success" size="mini"
                                            @click="showUpdateSequenceDialog(scope.$index + 1, config.not_allow, 'not_allow')">
-                                    改序
-                                </el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                </el-card>
-            </el-col>
-        </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="8">
-                <el-card>
-                    <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col :span="20">
-                            <h3>危险域名配置</h3>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20" style="margin-bottom: 10px">
-                        <el-col :span="12">
-                            <el-input v-model="dangerous_domain" placeholder="请输入域名" clearable/>
-                        </el-col>
-                        <el-col :span="12">
-                            <el-button @click="updateDangerousDomain(dangerous_domain, 'add')">增加</el-button>
-                        </el-col>
-                    </el-row>
-                    <el-table
-                            :data="config.dangerous_domain"
-                            tooltip-effect="dark"
-                            style="width: 100%"
-                            border
-                            :height="350"
-                    >
-                        <el-table-column
-                                label="序号"
-                                width="50"
-                        >
-                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
-                        </el-table-column>
-                        <el-table-column
-                                label="危险域名"
-                        >
-                            <template slot-scope="scope">{{ scope.row['data'] }}</template>
-                        </el-table-column>
-                        <el-table-column
-                                label="操作"
-                        >
-                            <template slot-scope="scope">
-                                <el-button type="primary" size="mini"
-                                           @click="showDialog(requestBlacklistDialog, scope.row['data'])">编辑
-                                </el-button>
-                                <el-button type="danger" size="mini" @click="deleteDangerousDomain(scope.row)">删除
-                                </el-button>
-                                <el-button v-if="!scope.row.enable" type="warning" size="mini"
-                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], true)">
-                                    启用
-                                </el-button>
-                                <el-button v-if="scope.row.enable" type="success" size="mini"
-                                           @click="enableConfig('dangerous_domain', config.dangerous_domain[scope.$index], false)">
-                                    停用
-                                </el-button>
-                                <el-button type="success" size="mini"
-                                           @click="showUpdateSequenceDialog(scope.$index + 1, config.dangerous_domain, 'dangerous_domain')">
                                     改序
                                 </el-button>
                             </template>
@@ -1673,6 +1687,7 @@
             split_str: '✦',
             dangerous_domain: '',
             white_domain: '',
+            dangerous_domain_return_ip: '',
             self_ip_list: [],
             updateSequenceDialog: {
                 show: false,
@@ -2756,6 +2771,15 @@
                     data.enable = type
                 }
                 this.save(this.config)
+            },
+            updateDangerousDomainReturnIp() {
+                if (this.reg.ipReg.test(this.config.dangerous_domain_return_ip)) {
+                    this.save({
+                        'dangerous_domain_return_ip': this.config.dangerous_domain_return_ip
+                    })
+                } else {
+                    this.$message.error('请输入正确ip')
+                }
             },
             updateLoginWaitSecond() {
                 if (!this.reg.notNumReg.test(this.config.login_wait_second)) {

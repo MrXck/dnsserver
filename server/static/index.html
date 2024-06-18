@@ -141,6 +141,20 @@
                             </el-col>
                         </el-row>
                     </div>
+                    <div>
+                        <el-row style="margin-top: 10px">
+                            危险域名的返回ip
+                        </el-row>
+                        <el-row :gutter="20" style="margin-top: 10px">
+                            <el-col :span="12">
+                                <el-input v-model="config.dangerous_domain_return_ip"></el-input>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-button  v-show="reg.ipReg.test(config.dangerous_domain_return_ip)"
+                                        @click="updateDangerousDomainReturnIp">修改</el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
                 </el-card>
             </el-col>
             <el-col :span="5">
@@ -2752,6 +2766,15 @@
                     })
                 } else {
                     this.$message.error('请输入数字')
+                }
+            },
+            updateDangerousDomainReturnIp() {
+                if (this.reg.ipReg.test(this.config.dangerous_domain_return_ip)) {
+                    this.save({
+                        'dangerous_domain_return_ip': this.config.dangerous_domain_return_ip
+                    })
+                } else {
+                    this.$message.error('请输入正确ip')
                 }
             },
             checkDns() {
