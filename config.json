@@ -41,6 +41,7 @@
  "is_screen": false,
  "is_filter": false,
  "port": 53,
+ "dns_resolve_source_port": 44444,
  "web_port": 5000,
  "log_num": 90,
  "is_deduplicate": false,

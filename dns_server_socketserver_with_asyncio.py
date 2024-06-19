@@ -242,7 +242,7 @@ class Config:
                                  'dnsservers', 'dangerous_domain']
     need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist',
                                        'filter_rule', 'dangerous_domain']
-    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
+    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second', 'dns_resolve_source_port']
     need_handle_ip_list = ['return_ip', 'immobilization']
     need_generate_ip_range_list = ['not_response', 'can_request']
 
@@ -274,6 +274,7 @@ class Config:
         print('使用的dns服务器为： ', self.dns_resolver.nameservers)
         self.log_num = config['log_num']
         self.port = config['port']
+        self.dns_resolve_source_port = config['dns_resolve_source_port']
         self.web_port = config['web_port']
         self.is_filter = config['is_filter']
         self.is_screen = config['is_screen']
@@ -379,7 +380,7 @@ class Config:
     @staticmethod
     def _resolve_domain(self, domain):
         try:
-            ip = self.dns_resolver.resolve(domain, 'A')[0].to_text()
+            ip = self.dns_resolver.resolve(domain, 'A', source_port=self.dns_resolve_source_port)[0].to_text()
             self._insert(self, domain, ip)
         except Exception as e:
             self.logger.error(e)
@@ -468,7 +469,7 @@ class Config:
     def check_dns_server(self, server_ip):
         try:
             conf.check_dns_resolver.nameservers = [server_ip]
-            conf.check_dns_resolver.resolve('www.baidu.com', 'A')[0].to_text()
+            conf.check_dns_resolver.resolve('www.baidu.com', 'A', source_port=self.dns_resolve_source_port)[0].to_text()
             return 1  # DNS 服务器响应正常
         except:
             return 2  # DNS 服务器不可用
@@ -566,7 +567,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
             for allow in conf.allow:
                 if allow.search(domain):
                     try:
-                        # ip = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+                        # ip = conf.dns_resolver.resolve(domain, 'A', source_port=self.dns_resolve_source_port)[0].to_text()
 
                         if conf.resolve_dict.get(domain, False) == '':
                             return False
@@ -675,7 +676,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
 
     def get_ipv6_from_domain(self, domain, address):
         try:
-            return conf.dns_resolver.resolve(domain, 'AAAA')[0].to_text()
+            return conf.dns_resolver.resolve(domain, 'AAAA', source_port=conf.dns_resolve_source_port)[0].to_text()
         except:
             return None
 
@@ -827,7 +828,7 @@ def get_ip():
     result = {'ip': ''}
     if domain:
         try:
-            result['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+            result['ip'] = conf.dns_resolver.resolve(domain, 'A', source_port=conf.dns_resolve_source_port)[0].to_text()
         except:
             pass
     return result
@@ -1154,7 +1155,7 @@ class Client(object):
         result = {'ip': ''}
         if domain:
             try:
-                result['ip'] = conf.dns_resolver.resolve(domain, 'A')[0].to_text()
+                result['ip'] = conf.dns_resolver.resolve(domain, 'A', source_port=conf.dns_resolve_source_port)[0].to_text()
             except:
                 pass
         return result
