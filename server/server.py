@@ -31,7 +31,7 @@ class Config:
     login_wait_second = 2
     config = {}
     lock = Lock()
-    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second']
+    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second', 'dns_resolve_source_port']
 
     def __init__(self):
         with open(os.path.join(base_dir, 'config.json'), encoding='utf-8', mode='r') as f:
@@ -363,6 +363,7 @@ if __name__ == '__main__':
         "server": False,
         "username": False,
         "dangerous_domain_return_ip": False,
+        "dns_resolve_source_port": False,
         "web_port": False
     }
     log = logging.getLogger('werkzeug')
