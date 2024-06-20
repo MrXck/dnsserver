@@ -348,14 +348,14 @@
                     </div>
                     <div>
                         <el-row style="margin-top: 10px">
-                            dns解析服务使用的端口
+                            dns解析服务使用的端口(0为不指定)
                         </el-row>
                         <el-row :gutter="20" style="margin-top: 10px">
                             <el-col :span="12">
                                 <el-input v-model="config.dns_resolve_source_port"></el-input>
                             </el-col>
                             <el-col :span="12">
-                                <el-button  v-show="!reg.notNumReg.test(config.dns_resolve_source_port) && config.dns_resolve_source_port > 0 && config.dns_resolve_source_port <= 65535"
+                                <el-button  v-show="!reg.notNumReg.test(config.dns_resolve_source_port) && config.dns_resolve_source_port >= 0 && config.dns_resolve_source_port <= 65535"
                                         @click="updateDnsResolveSourcePort">修改</el-button>
                             </el-col>
                         </el-row>
@@ -2813,7 +2813,7 @@
                 }
             },
             updateDnsResolveSourcePort() {
-                if (!this.reg.notNumReg.test(this.config.dns_resolve_source_port) && this.config.dns_resolve_source_port > 0 && this.config.dns_resolve_source_port <= 65535) {
+                if (!this.reg.notNumReg.test(this.config.dns_resolve_source_port) && this.config.dns_resolve_source_port >= 0 && this.config.dns_resolve_source_port <= 65535) {
                     this.save({
                         'dns_resolve_source_port': this.config.dns_resolve_source_port
                     })
