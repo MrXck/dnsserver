@@ -3,7 +3,6 @@ import datetime
 import json
 import logging
 import os
-import socket
 import socketserver
 import struct
 import sys
@@ -339,6 +338,7 @@ if __name__ == '__main__':
         "allow": False,
         "can_request": False,
         "dangerous_domain": False,
+        "dangerous_ip": False,
         "white_domain": False,
         "dnsservers": False,
         "elk": False,

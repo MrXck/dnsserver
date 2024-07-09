@@ -1283,6 +1283,51 @@
                     </el-table>
                 </el-card>
             </el-col>
+            <el-col :span="8">
+                <el-card>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="20">
+                            <h3>危险域名统计数据</h3>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20" style="margin-bottom: 10px">
+                        <el-col :span="12">
+                            <el-input v-model="dangerous_ip" placeholder="请输入ip" clearable/>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-button @click="updateDangerousIp(dangerous_ip, 'add')">增加</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-table
+                            :data="config.dangerous_ip"
+                            tooltip-effect="dark"
+                            style="width: 100%"
+                            border
+                            :height="350"
+                    >
+                        <el-table-column
+                                label="序号"
+                                width="50"
+                        >
+                            <template slot-scope="scope">{{ scope.$index + 1 }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="IP"
+                        >
+                            <template slot-scope="scope">{{ scope.row }}</template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作"
+                        >
+                            <template slot-scope="scope">
+                                <el-button type="danger" size="mini"
+                                           @click="deleteDangerousIp(scope.row)">删除
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
         </el-row>
     </div>
     <el-dialog title="编辑日志筛选"
@@ -1669,6 +1714,7 @@
             request_blacklist: '',
             response_blacklist: '',
             dangerous_domain: '',
+            dangerous_ip: '',
             white_domain: '',
             config_pull_ip: '',
             dns_ip: '',
@@ -1788,6 +1834,11 @@
             dangerousDomainDialog: {
                 origin: '',
                 now: '',
+                show: false
+            },
+            dangerousIPDialog: {
+                domain: '',
+                ip: '',
                 show: false
             },
             whiteDomainDialog: {
@@ -2529,6 +2580,43 @@
                     'dangerous_domain': this.config.dangerous_domain
                 })
             },
+            updateDangerousIp(ip, type) {
+                if (this.reg.ipReg.test(ip)) {
+                    if (type === 'add') {
+                        for (let i = 0; i < this.config.dangerous_ip.length; i++) {
+                            const data = this.config.dangerous_ip[i]
+                            if (ip === data) {
+                                this.$message.error('ip已存在')
+                                return
+                            }
+                        }
+                        this.config.dangerous_ip.unshift(ip)
+                    } else {
+                        for (let i = 0; i < this.config.dangerous_ip.length; i++) {
+                            let data = this.config.dangerous_ip
+                            if (data === this.dangerousIPDialog.origin) {
+                                this.config.dangerous_ip[i] = ip
+                                this.dangerousIPDialog.show = false
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    this.$message.error('输入的ip有误')
+                    return
+                }
+                this.save({
+                    'dangerous_ip': this.config.dangerous_ip
+                })
+    },
+            deleteDangerousIp(ip) {
+                this.config.dangerous_ip = this.config.dangerous_ip.filter(data => {
+                    return data !== ip
+                })
+                this.save({
+                    'dangerous_ip': this.config.dangerous_ip
+                })
+            },
             updateWhiteDomain(domain, type) {
                 if (this.reg.domainReg.test(domain)) {
                     if (type === 'add') {
@@ -3046,6 +3134,28 @@
                         })
                     }
                     return data
+                } catch (e) {
+                    return []
+                }
+            },
+            filterDangerousIPList() {
+                try {
+                    const domains = Object.keys(this.dangerous_list)
+                    const result = []
+
+                    domains.map(item => {
+                        const ips = Object.keys(this.dangerous_list[item])
+
+                        ips.map(ip => {
+                            if (ip === this.dangerousIPDialog.domain) {
+                                result.push({
+                                    domain: item,
+                                    num: this.dangerous_list[item][ip]
+                                })
+                            }
+                        })
+                    })
+                    return result
                 } catch (e) {
                     return []
                 }
