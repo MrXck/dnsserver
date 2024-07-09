@@ -1306,10 +1306,10 @@
             </el-col>
         </el-row>
     </div>
-    <el-dialog title="编辑日志筛选域名"
+    <el-dialog title="编辑日志筛选"
                :visible.sync="screenRuleDialog.show">
         <el-row style="margin-bottom: 10px">
-            dns服务器ip
+            筛选内容
         </el-row>
         <el-row>
             <el-col :span="16">
@@ -1321,10 +1321,10 @@
             <el-button type="primary" @click="updateScreenRule(screenRuleDialog.now.data, 'edit')">确 定</el-button>
         </div>
     </el-dialog>
-    <el-dialog title="编辑日志过滤域名"
+    <el-dialog title="编辑日志过滤"
                :visible.sync="filterRuleDialog.show">
         <el-row style="margin-bottom: 10px">
-            dns服务器ip
+            过滤内容
         </el-row>
         <el-row>
             <el-col :span="16">
@@ -1939,33 +1939,28 @@
                 })
             },
             updateScreenRule(domain, type) {
-                if (this.reg.domainReg.test(domain)) {
-                    if (type === 'add') {
-                        for (let i = 0; i < this.config.screen_rule.length; i++) {
-                            const data = this.config.screen_rule[i]['data']
-                            if (domain === data) {
-                                this.$message.error('域名已存在')
-                                return
-                            }
-                        }
-                        const data = {
-                            data: domain,
-                            enable: true
-                        }
-                        this.config.screen_rule.unshift(data)
-                    } else {
-                        for (let i = 0; i < this.config.screen_rule.length; i++) {
-                            let dns = this.config.screen_rule[i]['data']
-                            if (dns === this.screenRuleDialog.origin.data) {
-                                this.config.screen_rule[i]['data'] = domain
-                                this.screenRuleDialog.show = false
-                                break
-                            }
+                if (type === 'add') {
+                    for (let i = 0; i < this.config.screen_rule.length; i++) {
+                        const data = this.config.screen_rule[i]['data']
+                        if (domain === data) {
+                            this.$message.error('域名已存在')
+                            return
                         }
                     }
+                    const data = {
+                        data: domain,
+                        enable: true
+                    }
+                    this.config.screen_rule.unshift(data)
                 } else {
-                    this.$message.error('输入的ip有误')
-                    return
+                    for (let i = 0; i < this.config.screen_rule.length; i++) {
+                        let dns = this.config.screen_rule[i]['data']
+                        if (dns === this.screenRuleDialog.origin.data) {
+                            this.config.screen_rule[i]['data'] = domain
+                            this.screenRuleDialog.show = false
+                            break
+                        }
+                    }
                 }
                 this.save({
                     'screen_rule': this.config.screen_rule
@@ -1980,33 +1975,28 @@
                 })
             },
             updateFilterRule(domain, type) {
-                if (this.reg.domainReg.test(domain)) {
-                    if (type === 'add') {
-                        for (let i = 0; i < this.config.filter_rule.length; i++) {
-                            const data = this.config.filter_rule[i]['data']
-                            if (domain === data) {
-                                this.$message.error('域名已存在')
-                                return
-                            }
-                        }
-                        const data = {
-                            data: domain,
-                            enable: true
-                        }
-                        this.config.filter_rule.unshift(data)
-                    } else {
-                        for (let i = 0; i < this.config.filter_rule.length; i++) {
-                            let dns = this.config.filter_rule[i]['data']
-                            if (dns === this.filterRuleDialog.origin.data) {
-                                this.config.filter_rule[i]['data'] = domain
-                                this.filterRuleDialog.show = false
-                                break
-                            }
+                if (type === 'add') {
+                    for (let i = 0; i < this.config.filter_rule.length; i++) {
+                        const data = this.config.filter_rule[i]['data']
+                        if (domain === data) {
+                            this.$message.error('域名已存在')
+                            return
                         }
                     }
+                    const data = {
+                        data: domain,
+                        enable: true
+                    }
+                    this.config.filter_rule.unshift(data)
                 } else {
-                    this.$message.error('输入的ip有误')
-                    return
+                    for (let i = 0; i < this.config.filter_rule.length; i++) {
+                        let dns = this.config.filter_rule[i]['data']
+                        if (dns === this.filterRuleDialog.origin.data) {
+                            this.config.filter_rule[i]['data'] = domain
+                            this.filterRuleDialog.show = false
+                            break
+                        }
+                    }
                 }
                 this.save({
                     'filter_rule': this.config.filter_rule

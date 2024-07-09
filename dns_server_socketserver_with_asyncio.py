@@ -238,11 +238,13 @@ class Config:
     refresh_job_start = False
     logger = None
     need_clean_cache_key_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'return_ip', 'not_response',
-                                 'can_request', 'request_blacklist', 'screen_rule', 'filter_rule', 'immobilization',
+                                 'can_request', 'request_blacklist', 'filter_rule', 'immobilization',
                                  'dnsservers', 'dangerous_domain']
     need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist',
-                                       'filter_rule', 'dangerous_domain']
-    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second', 'dns_resolve_source_port']
+                                       'dangerous_domain']
+    need_enable_list = ['filter_rule', 'screen_rule']
+    need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second',
+                        'dns_resolve_source_port']
     need_handle_ip_list = ['return_ip', 'immobilization']
     need_generate_ip_range_list = ['not_response', 'can_request']
 
@@ -262,8 +264,8 @@ class Config:
         self.request_blacklist = self.get_enable_and_re_compile_list(config['request_blacklist'])
         self.response_blacklist = self.get_enable_and_re_compile_list(config['response_blacklist'])
         self.dns_servers = self.get_enable_list(config['dnsservers'])
-        self.filter_rule = self.get_enable_and_re_compile_list(config['filter_rule'])
-        self.screen_rule = self.get_enable_and_re_compile_list_with_not_exact_match(config['screen_rule'])
+        self.filter_rule = self.get_enable_list(config['filter_rule'])
+        self.screen_rule = self.get_enable_list(config['screen_rule'])
         self.dangerous_domain = self.get_enable_and_re_compile_list(config['dangerous_domain'])
         self.dangerous_domain_return_ip = config['dangerous_domain_return_ip']
 
@@ -401,7 +403,7 @@ class Config:
 
         if conf.is_filter:
             for filter_rule in conf.filter_rule:
-                if filter_rule.search(domain):
+                if filter_rule.search(data):
                     return
 
         if conf.is_screen and len(conf.screen_rule) > 0:
@@ -644,7 +646,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
             #     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}ip为{conf.symbol}{ip}{conf.symbol}')
             # return ip
             # conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file, domain, address[0])
-            conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
+            conf.log(
+                f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
             return None
 
         except Exception as e:
@@ -694,11 +697,12 @@ class DNSServer(socketserver.DatagramRequestHandler):
             elif ip == False:
                 return
         elif qtype == 'AAAA':
-            ip = self.get_ipv6_from_domain(domain, client_addr)
-            if ip:
-                response = self.reply_for_AAAA(income_record, ip=ip, ttl=60)
-                s.sendto(response.pack(), address)
-                return
+            ipv6.error(f'{client_addr[0]} 请求解析域名 {domain} 的 ipv6地址')
+        #     ip = self.get_ipv6_from_domain(domain, client_addr)
+        #     if ip:
+        #         response = self.reply_for_AAAA(income_record, ip=ip, ttl=60)
+        #         s.sendto(response.pack(), address)
+        #         return
 
         response = self.reply_for_not_found(income_record)
         s.sendto(response.pack(), address)
@@ -733,7 +737,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         if re.search(dangerous_domain, domain):
                             conf.write_dangerous_domain_logger_file_pool.submit(conf.write_dangerous_domain_logger_file,
                                                                                 domain, address[0])
-                            conf.log(f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
+                            conf.log(
+                                f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该域名是危险域名')
                             flag = True
                             break
                     if flag:
@@ -746,7 +751,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                         if type(not_response) == re.Pattern:
                             if not_response.search(address[0]):
                                 # logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                                conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log_info_file(
+                                    f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                                 conf.log(
                                     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
@@ -755,7 +761,8 @@ class DNSServer(socketserver.DatagramRequestHandler):
                             start, end = not_response.split('-')
                             if int(start) <= conf.ip_to_int(address[0]) <= int(end):
                                 # logger.info(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
-                                conf.log_info_file(f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
+                                conf.log_info_file(
+                                    f'{address[0]} 请求解析域名 {domain} 该请求ip {address[0]} 被黑名单拦截')
                                 conf.log(
                                     f'{conf.symbol}客户端IP:{address[0]}{conf.symbol}请求解析域名{conf.symbol}{domain}{conf.symbol}该请求ip{conf.symbol}{address[0]}{conf.symbol}被黑名单拦截')
                                 not_flag = True
@@ -892,6 +899,9 @@ def update_config(data: dict, conf):
         elif k == 'dnsservers':
             conf.dns_resolver.nameservers = conf.get_enable_list(v)
             conf.dns_servers = conf.get_enable_list(v)
+
+        elif k in conf.need_enable_list:
+            conf[k] = conf.get_enable_list(v)
 
         elif k in conf.need_enable_and_re_compile_list:
             conf[k] = conf.get_enable_and_re_compile_list(v)
@@ -1155,7 +1165,8 @@ class Client(object):
         result = {'ip': ''}
         if domain:
             try:
-                result['ip'] = conf.dns_resolver.resolve(domain, 'A', source_port=conf.dns_resolve_source_port)[0].to_text()
+                result['ip'] = conf.dns_resolver.resolve(domain, 'A', source_port=conf.dns_resolve_source_port)[
+                    0].to_text()
             except:
                 pass
         return result
@@ -1283,6 +1294,7 @@ if __name__ == '__main__':
     log_queue = queue.Queue()
     conf = Config()
     logger = get_myProjectLogger("dns", "log", elk=conf.elk, when='H', interval=1)
+    ipv6 = get_myProjectLogger("ipv6", "log", elk=conf.elk, when='H', interval=1)
     dangerous_domain_logger = get_myProjectLogger("dangerous_domain", "dangerous_log", elk=conf.elk, when='H',
                                                   interval=1)
     conf.logger = logger
