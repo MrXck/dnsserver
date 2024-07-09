@@ -267,6 +267,7 @@ class Config:
         self.filter_rule = self.get_enable_list(config['filter_rule'])
         self.screen_rule = self.get_enable_list(config['screen_rule'])
         self.dangerous_domain = self.get_enable_and_re_compile_list(config['dangerous_domain'])
+        self.dangerous_ip = config['dangerous_ip']
         self.dangerous_domain_return_ip = config['dangerous_domain_return_ip']
 
         self.immobilization = Config.handle_ip(config['immobilization'])
