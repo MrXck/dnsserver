@@ -30,6 +30,12 @@ app = Flask(__name__, static_folder='static', static_url_path='')
 
 
 def create_token(data, timeout=120):
+    """
+    创建token
+    :param data:
+    :param timeout:
+    :return:
+    """
     headers = {
         'type': 'jwt',
         'alg': 'HS256'
@@ -40,6 +46,11 @@ def create_token(data, timeout=120):
 
 
 def parse_payload(token):
+    """
+    解析token
+    :param token:
+    :return:
+    """
     result = {
         'status': False,
         'data': None,
@@ -60,6 +71,9 @@ def parse_payload(token):
 
 
 class LogFilter:
+    """
+       日志过滤器
+    """
     @staticmethod
     def info_filter(record):
         if record.levelname == 'INFO':
@@ -164,6 +178,11 @@ def get_myProjectLogger(project_name, log_file_name, elk, when='H', interval=1):
 
 class MySocketHandler(logging.handlers.SocketHandler):
     def makePickle(self, record):
+        """
+        将日志记录为文本，并返回字节流到 logstash
+        :param record:
+        :return:
+        """
         # 将日志消息格式化为字符串
         msg = self.format(record)
 
@@ -181,6 +200,9 @@ class MySocketHandler(logging.handlers.SocketHandler):
 
 
 class DateEncoder(json.JSONEncoder):
+    """
+        自定义日期序列化器
+    """
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.strftime("%Y-%m-%d %H:%M:%S")
@@ -657,12 +679,24 @@ class DNSServer(socketserver.DatagramRequestHandler):
             return None
 
     def reply_for_not_found(self, income_record):
+        """
+        返回域名不存在
+        :param income_record:
+        :return:
+        """
         header = DNSHeader(id=income_record.header.id, bitmap=income_record.header.bitmap, qr=1)
         header.set_rcode(0)  # 3 DNS_R_NXDOMAIN, 2 DNS_R_SERVFAIL, 0 DNS_R_NOERROR
         record = DNSRecord(header, q=income_record.q)
         return record
 
     def reply_for_A(self, income_record, ip, ttl=None):
+        """
+        返回A类型域名
+        :param income_record:
+        :param ip:
+        :param ttl:
+        :return:
+        """
         r_data = A(ip)
         header = DNSHeader(id=income_record.header.id, bitmap=income_record.header.bitmap, qr=1)
         domain = income_record.q.qname
@@ -671,6 +705,13 @@ class DNSServer(socketserver.DatagramRequestHandler):
         return record
 
     def reply_for_AAAA(self, income_record, ip, ttl=None):
+        """
+        返回AAAA类型域名
+        :param income_record:
+        :param ip:
+        :param ttl:
+        :return:
+        """
         r_data = AAAA(ip)
         header = DNSHeader(id=income_record.header.id, bitmap=income_record.header.bitmap, qr=1)
         domain = income_record.q.qname
@@ -679,6 +720,12 @@ class DNSServer(socketserver.DatagramRequestHandler):
         return record
 
     def get_ipv6_from_domain(self, domain, address):
+        """
+        获取ipv6地址
+        :param domain:
+        :param address:
+        :return:
+        """
         try:
             return conf.dns_resolver.resolve(domain, 'AAAA', source_port=conf.dns_resolve_source_port)[0].to_text()
         except:
@@ -689,6 +736,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
             qtype = QTYPE.get(income_record.q.qtype)
         except:
             qtype = 'unknown'
+        # ipv4 类型的dns解析
         if qtype == 'A':
             ip = self.get_ip_from_domain(domain, client_addr)
             if ip is not None and ip:
@@ -697,6 +745,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
                 return
             elif ip == False:
                 return
+        # ipv6 类型的dns解析
         elif qtype == 'AAAA':
             ipv6.error(f'{client_addr[0]} 请求解析域名 {domain} 的 ipv6地址')
         #     ip = self.get_ipv6_from_domain(domain, client_addr)
@@ -705,6 +754,7 @@ class DNSServer(socketserver.DatagramRequestHandler):
         #         s.sendto(response.pack(), address)
         #         return
 
+        # 回复未解析到ip
         response = self.reply_for_not_found(income_record)
         s.sendto(response.pack(), address)
 
@@ -801,11 +851,20 @@ class DNSServer(socketserver.DatagramRequestHandler):
 
 @app.route('/')
 def index():
+    """
+    访问首页
+    :return:
+    """
     return redirect('/index.html')
 
 
 # 定义登录装饰器，判断用户是否登录
 def decorator_login(func):
+    """
+    装饰器，判断用户是否登录
+    :param func:
+    :return:
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         authorization = request.headers.get('Authorization')
@@ -822,6 +881,10 @@ def decorator_login(func):
 @app.route('/all')
 @decorator_login
 def all_data():
+    """
+    获取所有数据
+    :return:
+    """
     f = open(os.path.join(base_dir, conf.config_filename), encoding='utf-8', mode='r')
     data = json.loads(f.read())
     f.close()
@@ -831,6 +894,10 @@ def all_data():
 @app.route('/get_ip', methods=['POST'])
 @decorator_login
 def get_ip():
+    """
+    获取ip
+    :return:
+    """
     data = request.get_json()
     domain = data.get('domain', None)
     result = {'ip': ''}
@@ -845,6 +912,10 @@ def get_ip():
 @app.route('/set_dns', methods=['POST'])
 @decorator_login
 def set_dns():
+    """
+    设置dns
+    :return:
+    """
     data = request.get_json()
     dns_ip = data.get('dns', None)
     result = {'code': 0}
@@ -860,6 +931,10 @@ def set_dns():
 @app.route('/get_self_ip')
 @decorator_login
 def get_self_ip():
+    """
+    获取本机ip
+    :return:
+    """
     self_ip = ''
     try:
         self_ip = conf.get_ip_list()
@@ -871,6 +946,10 @@ def get_self_ip():
 @app.route('/update', methods=['POST'])
 @decorator_login
 def update_re():
+    """
+    更新配置
+    :return:
+    """
     try:
         data = request.get_json()
     except:
@@ -883,6 +962,10 @@ def update_re():
 @app.route('/log')
 @decorator_login
 def get_log():
+    """
+    获取日志
+    :return:
+    """
     return {'data': list(log_queue.queue)[::-1]}
 
 
@@ -979,6 +1062,10 @@ def try_login(data):
 
 @app.route('/login', methods=['POST'])
 def login():
+    """
+    登录接口
+    :return:
+    """
     try:
         data = request.get_json()
         return try_login(data)
@@ -989,6 +1076,10 @@ def login():
 @app.route('/check_dns')
 @decorator_login
 def check_dns():
+    """
+    检查dns
+    :return:
+    """
     result = []
     for i in conf.dns_servers:
         start = time.time()
@@ -1013,6 +1104,10 @@ def check_dns():
 @app.route('/remove_dangerous', methods=['POST'])
 @decorator_login
 def remove_dangerous():
+    """
+    移除危险域名统计数据
+    :return:
+    """
     try:
         data = request.get_json()
         domain = data['domain']
@@ -1036,6 +1131,10 @@ def remove_dangerous():
 @app.route('/get_dangerous')
 @decorator_login
 def get_dangerous():
+    """
+    获取危险域名统计数据
+    :return:
+    """
     if not os.path.exists(os.path.join(base_dir, conf.total_filename)):
         with open(os.path.join(base_dir, conf.total_filename), encoding="utf-8", mode="w") as f:
             f.write(json.dumps({}))
