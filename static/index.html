@@ -3115,19 +3115,20 @@
                 }
                 if (this.config.is_filter) {
                     list = list.filter((data, index, arr) => {
-                        const split = data.split(this.split_str)
-                        let string
-                        if (this.split_str === ' ') {
-                            string = split[4]
-                        } else {
-                            string = split[3]
-                        }
+                        // const split = data.split(this.split_str)
+                        // let string
+                        // if (this.split_str === ' ') {
+                        //     string = split[4]
+                        // } else {
+                        //     string = split[3]
+                        // }
 
                         for (let i = 0; i < this.config.filter_rule.length; i++) {
                             const item = this.config.filter_rule[i]
                             if (item.enable) {
-                                let str = `^${item.data}$`
-                                if (string.match(str)) {
+                                // let str = `^${item.data}$`
+                                let str = `${item.data}`
+                                if (data.match(str)) {
                                     return false
                                 }
                             }

@@ -264,7 +264,7 @@ class Config:
                                  'dnsservers', 'dangerous_domain']
     need_enable_and_re_compile_list = ['not_allow', 'allow', 'not_request', 'response_blacklist', 'request_blacklist',
                                        'dangerous_domain']
-    need_enable_list = ['filter_rule', 'screen_rule']
+    need_enable_and_re_compile_with_not_start_and_end_list = ['filter_rule', 'screen_rule']
     need_to_int_list = ['refresh_cache_time', 'refresh_time', 'port', 'web_port', 'log_num', 'login_wait_second',
                         'dns_resolve_source_port']
     need_handle_ip_list = ['return_ip', 'immobilization']
@@ -977,15 +977,12 @@ def update_config(data: dict, conf):
             conf.cache = {}
             conf.write_file(conf)
 
-        if k == 'screen_rule':
-            conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
-
         elif k == 'dnsservers':
             conf.dns_resolver.nameservers = conf.get_enable_list(v)
             conf.dns_servers = conf.get_enable_list(v)
 
-        elif k in conf.need_enable_list:
-            conf[k] = conf.get_enable_list(v)
+        if k in conf.need_enable_and_re_compile_with_not_start_and_end_list:
+            conf.screen_rule = conf.get_enable_and_re_compile_list_with_not_exact_match(v)
 
         elif k in conf.need_enable_and_re_compile_list:
             conf[k] = conf.get_enable_and_re_compile_list(v)
